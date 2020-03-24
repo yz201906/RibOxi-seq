@@ -15,6 +15,7 @@ def line_2_list(input_line, separator):
 
 
 def move_umi(read_name, seq, umi_length):
+    """Takes in read names and actual read sequence and length umi, removes first n bases (n = umi_length) from sequence and append to read name line"""
     umi = seq[0:umi_length]
     seq_umi_removed = (seq[umi_length::]).rstrip("\n")
     name_list = line_2_list(read_name, " ")
@@ -22,6 +23,7 @@ def move_umi(read_name, seq, umi_length):
 
 
 def trim_quality(read_quality, umi_length):
+    """Takes in read quality line of a fastq record and removes the first n characters (n=umi_length)"""
     return read_quality[umi_length::] + "\n"
 
 
