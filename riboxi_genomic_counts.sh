@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #"""
 #Created on Thu Jul 22 12:30:01 2019
-#Updated on Sun Jul 22 13:48:05 2019
+
 #@author: yinzh
 #"""
 while IFS='' read -r line || [[ -n "$line" ]]; do
