@@ -1,5 +1,6 @@
-##RibOxi-Seq pipeline (Works with Illumins PE platforms)
+#RibOxi-Seq pipeline (Works with Illumins PE platforms)
 Custom scripts for processing sequencing reads from fastq to visualization and 2'-OMe count table
+
 ###Tested environment
 Ubuntu server 18.04 LTS, Python 3.6.9
 ###Required packages and python libraries
