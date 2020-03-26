@@ -69,10 +69,11 @@ To generate the count table:
 
 Place your reference_genome.2bit in the same directory with reference genome of interest and make sure they have same base_name.
 Prepare the genome annotation file (GTF used here) by cutting out the portion that will not be used:
-```
+```javascript
 cat "path/to/genome/genome.gtf" | cut -d";" -f1 > "path/to/genome/genome_cut.gtf"
 ```
 Then navigate to where bed files are and run:
-```
+```javascript
 riboxi_genomic_counts.sh [file_containing_sample_list] [species] [path/to/genome/genome_cut.gtf] [path/to/genome.2bit]
 ```
+The sh script will call ``riboxi_bed_parsing.py``
