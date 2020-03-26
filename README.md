@@ -1,16 +1,78 @@
-# RibOxi-Seq pipeline (Works with Illumins PE platforms)
+## RibOxi-Seq pipeline (Works with Illumina PE platforms)
 Custom scripts for processing sequencing reads from fastq to visualization and 2'-OMe count table
 
 ### Tested environment
-Ubuntu server 18.04 LTS, Python 3.6.9
+Ubuntu server 18.04 LTS 
+
+Python 3.6.9
+
 ### Required packages and python libraries
 *cutadapt* (tested on version 2.8)
+
 *pear* (tested on version 0.9.11)
+
 *STAR* (tested on version 2.7.1)
+
 *samtools* (tested on version 1.8)
+
 *umi_tools*
+
 *bedtools* (tested on version 2.28.0)
+
 *pandas*
+
+*twoBitToFa* (From UCSC https://genome.ucsc.edu/goldenpath/help/twoBit.html)
+
 ### Setup
-Clone the repository or download scripts to desired location. Either 'export' the directory containing the scripts to 'PATH' or add a line such as this 'export PATH="path\to\directory:$PATH"' to the end of .bashrc
+Clone the repository or download scripts to desired location. Either ``export`` the directory containing the scripts to ``PATH`` or add a line such as this ``export PATH="path\to\directory:$PATH"`` to the end of .bashrc
+
 ### Usage
+You can go from fastqs all the way to count tables and visualization using ``riboxi_pipeline.sh``, or the python scripts and listed packages can be run separately which might be helpful in first few passes to optimize some of the options.
+
+**Note:** 
+The pipeline and scripts assumes read structures demonstrated in the workflow pdf file, that is, randomer sequence at the 3'-end of read1 sequence and in-line barcode+linker at the 3'-end of read 2 seuqnece (while the in-line barcode is at the very end relative to the rest of the linker). 
+Also, additional adjustments of options used in *cutadapt*, *pear*, *STAR* etc. can be modified in the ``riboxi_pipeline.sh``.
+For count table generation, I currently only listed 2 common species, human and mouse, see begginning of ``riboxi_bed_parsing.py``:
+```javascript
+species_list = ['mouse', 'human']
+mouse = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
+         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chrX', 'chrY']
+human = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
+         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chr20', 'chr21', 'chr22', 'chrX', 'chrY',
+         'chrUn_gl000220']
+```
+For other species, one can modify the ``species_list`` and add additional lists containing chromosomal informations. For example, after verify exact anming on the corresponding GTF or GFF3 files, make the following changes: 
+```javascript
+species_list = ['mouse', 'human', 'arabidopsis']
+mouse = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
+         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chrX', 'chrY']
+human = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
+         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chr20', 'chr21', 'chr22', 'chrX', 'chrY',
+         'chrUn_gl000220']
+arabidopsis = ['chr1', 'chr2',...]
+```
+
+**To run the entire pipeline**, first make sure to place a file with samples names (one sample per line) inthe same directory with fastq files and run:
+```
+riboxi_pipeline.sh [file_containing_sample_list] [umi_length_as_number] [genome_path] [genome_basename] [species_exactly_as_mentioned_above] [3'-adapter_sequence] [in-line_barcode_sequence]
+```
+In the directory where the pipeline is run, there will be intermediary files starting with "dt" and "trimmed" generated, which is from cutadapt read-through adapter trimming step. There are also assembled and unassembled read files from pear. These are for potential troubleshooting, and they can be automatically removed by uncommenting ``riboxi_pipeline.sh`` line 104-108. Trimming and read-merging can be found in files named as [sample_name]".report".
+There will also be new directories named "bed_files" and "genomecov" in addition to one directory per sample for respective alignment output. The "bed_files" directory houses bed files and final count table, while the genomecov directory houses .genomecov files which can be directly uploaded to UCSC genome browser for visualization.
+
+**To use scripts separately**:
+
+``move_umi.py``: make sure read-through adapters are trimmed and R1 and R2 are merged into a single rea. Run:
+```
+move_umi.py [input_fastq] [length_of_umi_as_number] [output_name] [sequence_of_in-line_barcode] [3'-linker_sequence]
+```
+To generate the count table: 
+
+Place your reference_genome.2bit in the same directory with reference genome of interest and make sure they have same base_name.
+Prepare the genome annotation file (GTF used here) by cutting out the portion that will not be used:
+```
+cat "path/to/genome/genome.gtf" | cut -d";" -f1 > "path/to/genome/genome_cut.gtf"
+```
+Then navigate to where bed files are and run:
+```
+riboxi_genomic_counts.sh [file_containing_sample_list] [species] [path/to/genome/genome_cut.gtf] [path/to/genome.2bit]
+```
