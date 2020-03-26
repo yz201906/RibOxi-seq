@@ -41,14 +41,6 @@ def get_gtf_dict(chromosome, start, end, gene_id, gtf_dict):
                 gtf_dict[chromosome][gene_id][1] = end
 
 
-def get_gtf_list_dict(chromosome, start, end, gene_id, gtf_list_dict):
-    """Converts the format of the gtf_dict."""
-    gene = gene_id + '_' + str(start) + '_' + str(end)
-    if chromosome in gtf_list_dict:
-        gtf_list_dict[chromosome].append([start, end, gene])
-    else:
-        gtf_list_dict.update({chromosome: [[start, end, gene]]})
-
 
 def find_gene_id(base_list, base, left, right):
     """Takes a list as input (a list of [start position, end position, gene id] *pre-sorted*). Also takes in the

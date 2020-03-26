@@ -22,6 +22,7 @@ while [[ $i -le $umi_length ]];do
   "${umi_N_bases}N"
   ((i = i + 1))
 done
+echo "Number of Ns: "$umi_N_bases
 
 for read in $samplelist; do
   if [ ! -f "trimmed_""$read"".fastq" ]; then
@@ -35,7 +36,7 @@ for read in $samplelist; do
       -o "dt_""$read""_R1.fastq" \
       -p "dt_""$read""_R2.fastq" "$read""_R1.fastq" "$read""_R2.fastq">"$read"".report"
 #Use PEAR to merge Read1s and Read2s into a single read
-    pear -f "dt_""$read""_R1.fastq" -r "dt_""$read""_R2.fastq" -o "$read" -n 20 -j 12
+    pear -f "dt_""$read""_R1.fastq" -r "dt_""$read""_R2.fastq" -o "$read" -n 20 -j 12 >>"$read"".report"
 #Move the UMI from reads to read identifier line (first line of each fastq record). Also discard reads that do not contain in-line barcode
     move_umi.py "$read"".assembled.fastq" "$umi_length" "umiRemoved_""$read" "$in_line_barcode" "$adaptor_sequence"
 #Remove 3' adapter sequence which also contains the inline barcode for mis-priming mitigation
@@ -49,6 +50,7 @@ for read in $samplelist; do
     echo "$read"" reads already processed."
   fi
 done
+
 #Alignment of processed reads
 for sample in $samplelist; do
 	R1="trimmed_""$sample"".fastq"
@@ -98,4 +100,9 @@ cd "bed_files"
 echo "Counting 3' ends and generating count table..."
 riboxi_genomic_counts.sh "samplelist" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
 cd ".."
-rm "$genome_path""/""$genome""_cut.gtf"
+#rm "$genome_path""/""$genome""_cut.gtf"
+#rm "dt_*"
+#rm "trimmed_*"
+#rm_"umi_removed_"
+#rm "assembled_*"
+#rm "unassembled_*"
