@@ -15,7 +15,7 @@ Python 3.6.9
 
 *samtools* (tested on version 1.8)
 
-*umi_tools*
+*umi_tools* (package also requires: numpy, scipy, cython, pysam, future, regex and matplotlib)
 
 *bedtools* (tested on version 2.28.0)
 
@@ -57,12 +57,12 @@ arabidopsis = ['chr1', 'chr2',...]
 ```
 riboxi_pipeline.sh [file_containing_sample_list] [umi_length_as_number] [genome_path] [genome_basename] [species_exactly_as_mentioned_above] [3'-adapter_sequence] [in-line_barcode_sequence]
 ```
-In the directory where the pipeline is run, there will be intermediary files starting with "dt" and "trimmed" generated, which is from cutadapt read-through adapter trimming step. There are also assembled and unassembled read files from pear. These are for potential troubleshooting, and they can be automatically removed by uncommenting ``riboxi_pipeline.sh`` line 104-108. Trimming, read-merging and de-duplication statistics can be found in files named as [sample_name]".report".
+In the directory where the pipeline is run, there will be intermediary files starting with "dt" and "trimmed" generated, which is from cutadapt read-through adapter trimming step. There are also assembled and unassembled read files from pear. These are for potential troubleshooting, and they can be automatically removed by uncommenting ``riboxi_pipeline.sh`` line 104-108. Trimming, read-merging and de-duplication statistics can be found in files named as "[sample_name].report".
 There will also be new directories named "bed_files" and "genomecov" in addition to one directory per sample for respective alignment output. The "bed_files" directory houses bed files and final count table, while the genomecov directory houses .genomecov files which can be directly uploaded to UCSC genome browser for visualization.
 
 **To use scripts separately**:
 
-``move_umi.py``: make sure read-through adapters are trimmed and R1 and R2 are merged into a single rea. Run:
+``move_umi.py``: make sure read-through adapters are trimmed and R1 and R2 are merged into a single read. Run:
 ```
 move_umi.py [input_fastq] [length_of_umi_as_number] [output_name] [sequence_of_in-line_barcode] [3'-linker_sequence]
 ```
@@ -78,3 +78,9 @@ Then navigate to where bed files are and run:
 riboxi_genomic_counts.sh [file_containing_sample_list] [species] [path/to/genome/genome_cut.gtf] [genome_name.2bit]
 ```
 The sh script will call ``riboxi_bed_parsing.py``
+
+## Sample data availability
+This is the current working pipeline that we are working with internally, of which sequencing data is not yet publicly available.
+Sequencing data from original publications: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE102516  and  https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE96999 can be analyzed using scripts from the legacy_pipeline directory. The differences are attibuted to changes in umi and linker designs.
+
+### Legacy scripts usage
