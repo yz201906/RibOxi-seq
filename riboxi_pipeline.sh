@@ -84,7 +84,7 @@ for sample in $samplelist; do
   echo "Processing ""$sample"" STAR alignment files..."
   samtools index "Aligned.sortedByCoord.out.bam"
   echo "Deduplicating aligned reads..."
-  umi_tools dedup -I "Aligned.sortedByCoord.out.bam" -S "$sample""_dedup.bam"
+  umi_tools dedup -I "Aligned.sortedByCoord.out.bam" -S "$sample""_dedup.bam" >>"$read"".report"
   echo "Converting BAM to BED..."
   bedtools bamtobed -i "$sample""_dedup.bam" > "../bed_files/""$sample"".bed"
   echo "Generating genome coverage..."
