@@ -66,7 +66,6 @@ Then navigate to where bed files are and run:
 ```javascript
 riboxi_bed_parsing.py [sample_names_separated_by_commas] [species] [path/to/genome/genome_cut.gtf] [genome_name.2bit]
 ```
-The sh script will call ``riboxi_bed_parsing.py``
 
 ## Sample data availability
 This is the current working pipeline that we are working with internally, of which sequencing data is not yet publicly available.
