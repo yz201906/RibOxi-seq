@@ -24,7 +24,7 @@ def move_umi(read_name, seq, umi_length):
 
 def trim_quality(read_quality, umi_length):
     """Takes in read quality line of a fastq record and removes the first n characters (n=umi_length)"""
-    return read_quality[umi_length::] + "\n"
+    return read_quality[umi_length::]
 
 
 def get_gtf_dict(chromosome, start, end, gene_id, gtf_dict):

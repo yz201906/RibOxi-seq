@@ -15,20 +15,23 @@ genome="$4"
 species="$5"
 adaptor_sequence="$6"
 in_line_barcode="$7"
+cpu_threads="$8"
 
-umi_N_bases=''
+
 i=1
 while [[ $i -le $umi_length ]];do
-  "${umi_N_bases}N"
+  umi_N_bases="${umi_N_bases}N"
   ((i = i + 1))
 done
-echo "Number of Ns: "$umi_N_bases
+echo "Randomer: "$umi_N_bases
 
 for read in $samplelist; do
   if [ ! -f "trimmed_""$read"".fastq" ]; then
-    echo "Trimming $read reads..."
+    echo "Trimming $read reads...
+
+    "
 #Remove read-through adapter sequences. The fixed sequence under -A option corresponds to immumina universal 5' PCR adapter.
-    cutadapt -j 12 \
+    cutadapt -j $cpu_threads \
       --minimum-length 20:20 \
       -a "$adaptor_sequence" \
       -A $umi_N_bases"AGATCGGAAGAGCGGTTCAG" \
@@ -36,18 +39,37 @@ for read in $samplelist; do
       -o "dt_""$read""_R1.fastq" \
       -p "dt_""$read""_R2.fastq" "$read""_R1.fastq" "$read""_R2.fastq">"$read"".report"
 #Use PEAR to merge Read1s and Read2s into a single read
-    pear -f "dt_""$read""_R1.fastq" -r "dt_""$read""_R2.fastq" -o "$read" -n 20 -j 12 >>"$read"".report"
+    echo "
+
+
+Merging PE reads with PEAR..."
+    echo "Effective command: -f dt_""$read""_R1.fastq -r dt_""$read""_R2.fastq -o ""$read"" -n 20 -j ""$cpu_threads"" >>""$read"".report" >>"$read"".report"
+    pear -f "dt_""$read""_R1.fastq" -r "dt_""$read""_R2.fastq" -o "$read" -n 20 -j $cpu_threads >>"$read"".report"
 #Move the UMI from reads to read identifier line (first line of each fastq record). Also discard reads that do not contain in-line barcode
+    echo "
+
+
+Moving UMIs to read names..."
+    echo "Effective command: ""$read"".assembled.fastq" "$umi_length" "umiRemoved_""$read" "$in_line_barcode" "$adaptor_sequence" >>"$read"".report"
     move_umi.py "$read"".assembled.fastq" "$umi_length" "umiRemoved_""$read" "$in_line_barcode" "$adaptor_sequence"
 #Remove 3' adapter sequence which also contains the inline barcode for mis-priming mitigation
-    cutadapt -j 12 \
+    echo "
+
+
+Triming 3' adapter...
+
+    "
+    cutadapt -j $cpu_threads \
       --discard-untrimmed \
       --minimum-length 20 \
       -a "$adaptor_sequence" \
       -e 0.2 \
       -o "trimmed_""$read"".fastq" "umiRemoved_""$read"".fastq">>"$read"".report"
   else
-    echo "$read"" reads already processed."
+    echo "
+
+
+$read"" reads already processed."
   fi
 done
 
@@ -58,8 +80,11 @@ for sample in $samplelist; do
                 mkdir -p "$sample"
         fi
   if [ ! -f "$sample""/Aligned.sortedByCoord.out.bam" ]; then
-    echo "Aligning ""$sample"" with STAR..."
-    STAR --runThreadN 12 \
+    echo "
+
+
+Aligning ""$sample"" with STAR..."
+    STAR --runThreadN $cpu_threads \
       --outMultimapperOrder Random \
       --outFilterScoreMinOverLread 0.4 \
       --alignEndsType EndToEnd \
@@ -97,8 +122,12 @@ done
 # shellcheck disable=SC2002
 cat "$genome_path""/""$genome"".gtf" | cut -d";" -f1 > "$genome_path""/""$genome""_cut.gtf" #Cut out everything after first ";" from every row of the GTF file for easier parsing
 cd "bed_files"
-echo "Counting 3' ends and generating count table..."
-riboxi_genomic_counts.sh "samplelist" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
+echo "Counting 3' ends and generating count table...
+
+
+"
+echo "Effective command: ""$samplelist" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
+riboxi_bed_parsing.py "$samplelist" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
 cd ".."
 #rm "$genome_path""/""$genome""_cut.gtf"
 #rm "dt_*"

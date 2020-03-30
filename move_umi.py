@@ -23,7 +23,7 @@ except:
 output_read = open(output_file_name + ".fastq", 'w')
 umiDict = {}
 with open(input_read, 'r') as read2:
-    for line1, line2, line3, line4 in itertools.zip_longest(*[read2] * 4):
+    for line1, line2, line3, line4 in itertools.izip_longest(*[read2] * 4):
         if spot_mispriming(line2[len(line2) - len(adapter_sequence) - 1:len(line2):], in_line_barcode) == 1:
             continue
         processed_reads = move_umi(line1, line2, int(umi_length))

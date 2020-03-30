@@ -14,26 +14,27 @@ import glob
 from riboxi_functions import *
 
 # Main
-species_list = ['mouse', 'human']
-mouse = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
-         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chrX', 'chrY']
-human = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
+species_list = {'mouse':['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
+         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chrX', 'chrY'], 'human':['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
          'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chr20', 'chr21', 'chr22', 'chrX', 'chrY',
-         'chrUn_gl000220']
+         'chrUn_gl000220']}
 parser = argparse.ArgumentParser()
 parser.add_argument("bed_files", help="Names of the files separated with ',':")
 parser.add_argument("species", help="human or mouse?")
 parser.add_argument("gtf", help="GTF file is required.")
 parser.add_argument("genomeTwoBit", help="reference genome fasta file is required.")
 args = parser.parse_args()
-
-file_list = line_2_list(args.bed_files, ',')
-
+input_samples=(args.bed_files.lstrip(' ')).rstrip(' ')
+if ' ' in args.bed_files:
+    file_list = line_2_list(input_samples, ' ')
+else:
+    file_list = input_samples
+print(file_list)
 if args.species not in species_list:
     sys.exit("Error: Species not supported")
 else:
-    all_chromosomes = args.species
-    print(all_chromosomes)
+    all_chromosomes = species_list[args.species]
+print(all_chromosomes)
 
 for csv in glob.glob("*.csv"):
     os.remove(csv)
