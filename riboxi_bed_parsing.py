@@ -24,11 +24,11 @@ parser.add_argument("species", help="human or mouse?")
 parser.add_argument("gtf", help="GTF file is required.")
 parser.add_argument("genomeTwoBit", help="reference genome fasta file is required.")
 args = parser.parse_args()
-input_samples=(args.bed_files.lstrip(' ')).rstrip(' ')
-if ' ' in args.bed_files:
-    file_list = line_2_list(input_samples, ' ')
+input_samples=(args.bed_files.lstrip(',')).rstrip(',')
+if ',' in args.bed_files:
+    file_list = line_2_list(input_samples, ',')
 else:
-    file_list = input_samples
+    file_list = [input_samples]
 print(file_list)
 if args.species not in species_list:
     sys.exit("Error: Species not supported")

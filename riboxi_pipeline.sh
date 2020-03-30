@@ -126,8 +126,11 @@ echo "Counting 3' ends and generating count table...
 
 
 "
-echo "Effective command: ""$samplelist" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
-riboxi_bed_parsing.py "$samplelist" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
+input_list=$(echo $samplelist | tr ' ' ,)
+echo "
+Input samples: $input_list
+Effective command: ""$input_list" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
+riboxi_bed_parsing.py "$input_list" "$species" "$genome_path""/""$genome""_cut.gtf" "$genome_path""/""$genome"".2bit"
 cd ".."
 #rm "$genome_path""/""$genome""_cut.gtf"
 #rm "dt_*"
