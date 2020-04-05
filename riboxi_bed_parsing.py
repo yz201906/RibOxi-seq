@@ -22,8 +22,8 @@ parser.add_argument('-b', '--bed_files', required=True, help="Names of the files
 parser.add_argument('-s', '--species', required=True, help="Specify species file in the current dir.")
 parser.add_argument('-g', '--gtf', required=True, help="GTF file is required (path to gtf file).")
 parser.add_argument('-2b', "--genome_2_bit", required=True, help="Path to the 2bit genome.")
-parser.add_argument('-m', '--mode', required=False)
 parser.add_argument('-c', '--cpu_threads', required=False)
+parser.add_argument('-m', '--mode', required=False)
 args = parser.parse_args()
 
 try:  # If parameters are not from pipeline, check input.

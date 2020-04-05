@@ -150,7 +150,7 @@ echo "
 Input samples: $input_list
 Effective command: '-b '$input_list' -s '$species' -g '$genome_path'/'$genome'_cut.gtf -2b '$genome_path'/'$genome'.2bit' -c $cpu_threads
 "
-riboxi_bed_parsing.py -b "$input_list" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -m 'pipeline' -c $cpu_threads
+riboxi_bed_parsing.py -b "$input_list" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
 cd ".."
 #rm "$genome_path""/""$genome""_cut.gtf"
 #rm "dt_*"
