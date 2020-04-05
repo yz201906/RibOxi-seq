@@ -1,39 +1,71 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Oct 08 21:09:55 2019
 
 @author: yinzh
 """
-import sys
-import pandas as pd
 import argparse
-import os
 import copy
 import glob
+import multiprocessing as mp
+import os
+import sys
+
+import pandas as pd
+
 from riboxi_functions import *
 
 # Main
-species_list = {'mouse':['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
-         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chrX', 'chrY'], 'human':['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13',
-         'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chr20', 'chr21', 'chr22', 'chrX', 'chrY',
-         'chrUn_gl000220']}
 parser = argparse.ArgumentParser()
-parser.add_argument("bed_files", help="Names of the files separated with ',':")
-parser.add_argument("species", help="human or mouse?")
-parser.add_argument("gtf", help="GTF file is required.")
-parser.add_argument("genomeTwoBit", help="reference genome fasta file is required.")
+parser.add_argument('-b', '--bed_files', required=True, help="Names of the files separated with commas.")
+parser.add_argument('-s', '--species', required=True, help="Specify species file in the current dir.")
+parser.add_argument('-g', '--gtf', required=True, help="GTF file is required (path to gtf file).")
+parser.add_argument('-2b', "--genome_2_bit", required=True, help="Path to the 2bit genome.")
+parser.add_argument('-m', '--mode', required=False)
+parser.add_argument('-c', '--cpu_threads', required=False)
 args = parser.parse_args()
-input_samples=(args.bed_files.lstrip(',')).rstrip(',')
+
+try:  # If parameters are not from pipeline, check input.
+    if not args.mode or args.mode != "pipeline":
+        if len((args.bed_files.lstrip(',')).rstrip(',')) == 0:
+            print("Sample list")
+            raise IsEmpty
+        for samples in args.bed_files:
+            if os.path.isfile(os.curdir + "/" + samples + '.bed') is False:
+                print(samples + '.bed')
+                raise CannotOpenFile
+        if os.path.isfile(os.curdir + "/" + args.species) is False:
+            print(args.species)
+            raise CannotOpenFile
+        if os.path.isfile(args.gtf) is False:
+            print(args.gtf)
+            raise CannotOpenFile
+        if os.path.isfile(args.genome_2_bit) is False:
+            print(args.genome_2_bit)
+            raise CannotOpenFile
+        if args.cpu_threads:
+            threads = num_str_to_int(args.cpu_threads)
+            if threads == 0:
+                print('CPU threads')
+                raise IsNotInt
+
+except IsEmpty:
+    print("cannot be empty.")
+    sys.exit(1)
+except CannotOpenFile:
+    print("cannot be located, please ensure the path is correct.")
+    sys.exit(1)
+
+input_samples = (args.bed_files.lstrip(',')).rstrip(',')
 if ',' in args.bed_files:
     file_list = line_2_list(input_samples, ',')
 else:
     file_list = [input_samples]
 print(file_list)
-if args.species not in species_list:
-    sys.exit("Error: Species not supported")
-else:
-    all_chromosomes = species_list[args.species]
+
+my_species = open(args.species, 'r')
+all_chromosomes = line_2_list(my_species.readline(), ',')
 print(all_chromosomes)
 
 for csv in glob.glob("*.csv"):
@@ -97,14 +129,21 @@ header_list = line_2_list(all_counts.readline(), '_\t')
 header = header_list[0] + '\t' + header_list[2] + '\t' + 'seq' + '\t' + '\t' + header_list[
     3] + '\t' + '\n'
 final_file.write(header)
+all_counts.close()
+
+threads = 1
+if args.cpu_threads:
+    threads = num_str_to_int(args.cpu_threads)
+    if threads >= mp.cpu_count():
+        threads = threads - 1
+pool = mp.Pool(threads)
+print("Using " + str(threads) + " cpu threads to generate table annotation...")
 with open('all_counts.tsv', 'r') as counts:
     next(counts)
-    for line in counts:
-        seq = ''
-        line_list = line_2_list(line, '\t')
-        seq = get_rna_seq(line_list[0], int(line_list[1]) - 16, int(line_list[1]) + 15, args.genomeTwoBit)
-        if line_list[2] == '-':
-            seqRC = reverse_compliment(seq)
-            seq = seqRC
-        final_file.write(line_list[0] + '\t' + line_list[1] + '\t' + line_list[3].rstrip(
-            '_') + '\t' + seq + '\t' + '\t' + line_2_list(line, '_\t')[1] + '\n')
+    results = [pool.apply(get_annotated_table, args=(line, args.genome_2_bit)) for line in counts]
+    for row in results:
+        final_file.write(row)
+pool.close()
+
+final_file.close()
+counts.close()

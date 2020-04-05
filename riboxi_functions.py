@@ -1,21 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Mar 01 18:21:10 2018
 
 @author: yinzh
 """
-
 from os import popen
 
-
-def line_2_list(input_line, separator):
-    line_list = (input_line.rstrip("\n")).split(separator)
-    return line_list
+from house_keeping_functions import *
 
 
 def move_umi(read_name, seq, umi_length):
-    """Takes in read names and actual read sequence and length umi, removes first n bases (n = umi_length) from sequence and append to read name line"""
+    """Takes in read names and actual read sequence and length umi, removes first n bases (n = umi_length)
+    from sequence and append to read name line"""
     umi = seq[0:umi_length]
     seq_umi_removed = (seq[umi_length::]).rstrip("\n")
     name_list = line_2_list(read_name, " ")
@@ -41,7 +38,6 @@ def get_gtf_dict(chromosome, start, end, gene_id, gtf_dict):
                 gtf_dict[chromosome][gene_id][1] = end
 
 
-
 def find_gene_id(base_list, base, left, right):
     """Takes a list as input (a list of [start position, end position, gene id] *pre-sorted*). Also takes in the
     arguments of base position, 0, length of list, which are used to search the base position in the list and returns
@@ -65,24 +61,20 @@ def chr_base_dictionary(chromosome, start, end, strand, pos_dict, gtf_list_dict)
             if end not in pos_dict[chromosome]:
                 gene_id = find_gene_id(gtf_list_dict[chromosome], end, 0, len(gtf_list_dict[chromosome]) - 1)
                 if gene_id != -1:
-                    gene_id = 'NOT_ANNOTATED'
                     pos_dict[chromosome].update({end: [0, gene_id, strand]})
         else:
             gene_id = find_gene_id(gtf_list_dict[chromosome], end, 0, len(gtf_list_dict[chromosome]) - 1)
             if gene_id != -1:
-                gene_id = 'NOT_ANNOTATED'
                 pos_dict.update({chromosome: {end: [0, gene_id, strand]}})
     else:
         if chromosome in pos_dict:
             if start not in pos_dict[chromosome]:
                 gene_id = find_gene_id(gtf_list_dict[chromosome], start, 0, len(gtf_list_dict[chromosome]) - 1)
                 if gene_id != -1:
-                    gene_id = 'NOT_ANNOTATED'
                     pos_dict[chromosome].update({start: [0, gene_id, strand]})
         else:
             gene_id = find_gene_id(gtf_list_dict[chromosome], start, 0, len(gtf_list_dict[chromosome]) - 1)
             if gene_id != -1:
-                gene_id = 'NOT_ANNOTATED'
                 pos_dict.update({chromosome: {start: [0, gene_id, strand]}})
 
 
@@ -114,26 +106,15 @@ def get_rna_seq(chromosome, start, end, two_bit):
     process = popen(
         'twoBitToFa -seq=' + chromosome + ' -start=' + str(start) + ' -end=' + str(
             end) + ' ' + two_bit + ' stdout').read()
-    return line_2_list(process, '\n')[1]
+    return line_2_list(process.upper(), '\n')[1]
 
 
-def reverse_compliment(seq):
-    """Takes a sequence string and returns a complimentary sequence string."""
-    seqRC = ''
-    for i in range(len(seq) - 1, -1, -1):
-        if seq[i] == "A":
-            seqRC += "T"
-        elif seq[i] == "T":
-            seqRC += "A"
-        elif seq[i] == "C":
-            seqRC += "G"
-        else:
-            seqRC += "C"
-    return seqRC
-
-
-def spot_mispriming(seq, in_line_barcode):
-    if seq == in_line_barcode:
-        return 1
-    else:
-        return 2
+def get_annotated_table(table_row, genome_2_bit):
+    line_list = line_2_list(table_row, '\t')
+    seq = get_rna_seq(line_list[0], int(line_list[1]) - 16, int(line_list[1]) + 15, genome_2_bit)
+    if line_list[2] == '-':
+        seq_rc = reverse_compliment(seq)
+        seq = seq_rc
+    out_string = line_list[0] + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + '\t' + \
+                 line_2_list(table_row, '_\t')[1] + '\n'
+    return out_string

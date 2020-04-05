@@ -4,8 +4,8 @@ import copy
 import glob
 import os
 import sys
-import pandas as pd
 
+import pandas as pd
 from yz_seq_functions import *
 
 # Main
