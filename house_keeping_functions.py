@@ -9,9 +9,15 @@ from pylcs import lcs
 
 
 def num_str_to_int(num_str):
+    zero_count = 0
     for char in num_str:
-        if char not in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
+        if char not in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
             return 0
+        else:
+            if int(char) == 0:
+                zero_count += 1
+    if zero_count == len(num_str):
+        return 0
     return int(num_str)
 
 
