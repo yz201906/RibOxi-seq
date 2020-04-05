@@ -33,6 +33,7 @@ for read in $samplelist; do
   if [ ! -f 'trimmed_'"$read"'.fastq' ]; then
     echo "Trimming $read reads...
 
+
     "
     #Remove read-through adapter sequences. The fixed sequence under -A option corresponds to immumina universal 5' PCR adapter.
     cutadapt -j $cpu_threads \
@@ -55,7 +56,7 @@ Merging PE reads with PEAR..."
 
 Moving UMIs to read names..."
     echo "Effective command: -r $read'.assembled.fastq' -l $umi_length -o 'umiRemoved_'$read -i $in_line_barcode -a $adaptor_sequence" >>"$read"'.report'
-    move_umi.py -r "$read"'.assembled.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adaptor_sequence" -m 'pipeline'
+    move_umi.py -r "$read"'.assembled.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adaptor_sequence" -m 'pipeline' >>"$read"".report"
     #Remove 3' adapter sequence which also contains the inline barcode for mis-priming mitigation
     echo "
 
@@ -88,7 +89,8 @@ for sample in $samplelist; do
     echo "
 
 
-Aligning ""$sample"" with STAR..."
+Aligning ""$sample"" with STAR...
+"
     STAR --runThreadN $cpu_threads \
       --outMultimapperOrder Random \
       --outFilterScoreMinOverLread 0.4 \
@@ -117,19 +119,23 @@ for sample in $samplelist; do
   cd "$sample"
   echo "
 
-Processing ""$sample"" STAR alignment files..."
+Processing ""$sample"" STAR alignment files...
+"
   samtools index "Aligned.sortedByCoord.out.bam"
   echo "
 
-Deduplicating aligned reads..."
+Deduplicating aligned reads...
+"
   umi_tools dedup -I "Aligned.sortedByCoord.out.bam" -S "$sample""_dedup.bam" >>"$read"".report"
   echo "
 
-Converting BAM to BED..."
+Converting BAM to BED...
+"
   bedtools bamtobed -i "$sample""_dedup.bam" >"../bed_files/""$sample"".bed"
   echo "
 
-Generating genome coverage..."
+Generating genome coverage...
+"
   bedtools genomecov \
     -trackline \
     -trackopts "name=""$sample" \
@@ -148,8 +154,8 @@ Counting 3' ends and generating count table...
 input_list=$(echo "$samplelist" | tr ' ' ,)
 echo "
 Input samples: $input_list
-Effective command: '-b '$input_list' -s '$species' -g '$genome_path'/'$genome'_cut.gtf -2b '$genome_path'/'$genome'.2bit' -c $cpu_threads
-"
+Effective command: -b $input_list -s $species -g $genome_path/$genome'_cut.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
+" >>"$read"".report"
 riboxi_bed_parsing.py -b "$input_list" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
 cd ".."
 #rm "$genome_path""/""$genome""_cut.gtf"
