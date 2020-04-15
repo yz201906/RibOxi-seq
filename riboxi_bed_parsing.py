@@ -135,7 +135,7 @@ threads = 1
 if args.cpu_threads:
     threads = num_str_to_int(args.cpu_threads)
     if threads >= mp.cpu_count():
-        threads = threads - 1
+        threads = mp.cpu_count() - 1
 pool = mp.Pool(threads)
 print("Using " + str(threads) + " cpu threads to generate table annotation...")
 with open('all_counts.tsv', 'r') as counts:
