@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Oct 08 21:09:55 2019
@@ -57,9 +57,9 @@ except CannotOpenFile:
     print("cannot be located, please ensure the path is correct.")
     sys.exit(1)
 
-input_samples = (args.bed_files.lstrip(',')).rstrip(',')
-if ',' in args.bed_files:
-    file_list = line_2_list(input_samples, ',')
+input_samples = (args.bed_files.lstrip(' ')).rstrip(' ')
+if '  ' in args.bed_files:
+    file_list = line_2_list(input_samples, '  ')
 else:
     file_list = [input_samples]
 print(file_list)

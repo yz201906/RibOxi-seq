@@ -57,7 +57,7 @@ Merging PE reads with PEAR..."
 Moving UMIs to read names..."
     echo "Effective command: -r $read'.assembled.fastq' -l $umi_length -o 'umiRemoved_'$read -i $in_line_barcode -a $adaptor_sequence" >>"$read"'.report'
     move_umi.py -r "$read"'.assembled.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adaptor_sequence" -m 'pipeline' >>"$read"".report"
-    #Remove 3' adapter sequence which also contains the inline barcode for mis-priming mitigation
+    #Remove 3' inline barcode for mis-priming mitigation
     echo "
 
 
@@ -151,16 +151,16 @@ Counting 3' ends and generating count table...
 
 
 "
-input_list=$(echo "$samplelist" | tr ' ' ,)
 echo "
-Input samples: $input_list
-Effective command: -b $input_list -s $species -g $genome_path/$genome'_cut.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
+Input samples: $samplelist
+Effective command: -b $samplelist -s $species -g $genome_path/$genome'_cut.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
 " >>"$read"".report"
-riboxi_bed_parsing.py -b "$input_list" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
+riboxi_bed_parsing.py -b "$samplelist" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
+data_table_prep.R
 cd ".."
-#rm "$genome_path""/""$genome""_cut.gtf"
-#rm "dt_*"
+rm "$genome_path""/""$genome""_cut.gtf"
+rm "dt_*"
 #rm "trimmed_*"
 #rm_"umi_removed_"
 #rm "assembled_*"
-#rm "unassembled_*"
+rm "unassembled_*"

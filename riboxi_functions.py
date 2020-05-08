@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Mar 01 18:21:10 2018
@@ -107,3 +107,13 @@ def get_rna_seq(chromosome, start, end, two_bit):
         'twoBitToFa -seq=' + chromosome + ' -start=' + str(start) + ' -end=' + str(
             end) + ' ' + two_bit + ' stdout').read()
     return line_2_list(process.upper(), '\n')[1]
+
+def get_annotated_table(table_row, genome_2_bit):
+    line_list = line_2_list(table_row, '\t')
+    seq = get_rna_seq(line_list[0], int(line_list[1]) - 16, int(line_list[1]) + 15, genome_2_bit)
+    if line_list[2] == '-':
+        seq_rc = reverse_compliment(seq)
+        seq = seq_rc
+    out_string = line_list[0] + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + '\t' + \
+                 line_2_list(table_row, '_\t')[1] + '\n'
+    return out_string

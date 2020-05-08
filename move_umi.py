@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Aug 21 14:19:19 2019
@@ -35,9 +35,9 @@ try:  # If parameters are not from pipeline, check input.
             raise IsNotInt
 
         for bases in args.in_line_barcode:
-            if bases not in "ATCG":
+            if bases not in "ATCGN":
                 print("Adapter sequence")
-                raise IsNotDNABase
+                raise IsNotDNABaseWithN
 
         for bases in args.adapter_sequence:
             if bases not in "ATCGN":
@@ -50,7 +50,7 @@ try:  # If parameters are not from pipeline, check input.
     reads_out = 0
     with open(args.input_read, 'r') as read2:
         # noinspection PyUnresolvedReferences
-        for line1, line2, line3, line4 in itertools.izip_longest(*[read2] * 4):
+        for line1, line2, line3, line4 in itertools.zip_longest(*[read2] * 4):
             reads_in += 1
             if sequence_compare(line2[len(line2) - len(args.adapter_sequence) - 1:len(line2):],
                                 args.in_line_barcode) == 2:
@@ -64,7 +64,7 @@ try:  # If parameters are not from pipeline, check input.
     output_read.close()
     print("Number of merged reads as input:" + str(reads_in))
     print("Number of non-mispriming reads:" + str(reads_out))
-    print("% passed reads:" + str(reads_out / reads_out) + "%")
+    print("% passed reads:" + str((reads_out / reads_out)*100) + "%")
 except IsNotInt:
     print("can only be a non-zero integer.")
     sys.exit(1)
@@ -73,7 +73,4 @@ except CannotOpenFile:
     sys.exit(1)
 except IsNotDNABaseWithN:
     print("can only contain A, T, C, G and N.")
-    sys.exit(1)
-except IsNotDNABase:
-    print("can only contain A, T, C, G.")
     sys.exit(1)

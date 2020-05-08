@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Apr 04 19:12:31 2020
@@ -41,9 +41,9 @@ try:
             raise IsNotDNABaseWithN
 
     for bases in args.in_line_barcode:
-        if bases not in "ATCG":
+        if bases not in "ATCGN":
             print("In-line barcode")
-            raise IsNotDNABase
+            raise IsNotDNABaseWithN
 
     threads = num_str_to_int(args.cpu_threads)
     if threads == 0:
@@ -58,7 +58,4 @@ except CannotOpenFile:
     sys.exit(1)
 except IsNotDNABaseWithN:
     print("can only contain A, T, C, G and N.")
-    sys.exit(1)
-except IsNotDNABase:
-    print("can only contain A, T, C, G.")
     sys.exit(1)
