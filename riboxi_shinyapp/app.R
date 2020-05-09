@@ -50,14 +50,14 @@ ui <- fluidPage(
         downloadButton("download_individual_table", "Download table for this gene")
     })),
     shiny::tags$h1(
-        " ==================================================================================================================================================================="
+        " ____________________________________________________________________________________________________________________________________________________________________________"
     ),
 
     shiny::tags$h1("                                 "),
     sidebarLayout(
         sidebarPanel(
             uiOutput("my_base_list"),
-            style = "position:relative;bottom:0;",
+            actionButton('plot_zoomed', 'Plot'),
             downloadButton("download_pdf2", "Download plot"),
             width = 3
         ),
@@ -168,7 +168,7 @@ server <- function (input, output, session) {
             )
     })
 
-    my_position <- reactive({
+    my_position <- eventReactive(input$plot_zoomed, {
         position <- input[['selected_site']]
         position <- as.data.frame(position)
         position <-
