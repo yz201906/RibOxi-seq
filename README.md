@@ -1,12 +1,16 @@
 ## RibOxi-Seq pipeline (Works with Illumina PE platforms)
 Custom scripts for processing sequencing reads from fastqs to visualization and 2'-OMe count table
 
+**For overal workflow and visual demonstration, please refer to the PDF file**
+
 ### Tested environment
 Ubuntu server 18.04 LTS 
 
 Python 3.6.9 and 2.7.11
 
-### Required packages and python libraries
+R 3.6.3
+
+### Required tools and python libraries
 *cutadapt* (tested on version 2.8)
 
 *pear* (tested on version 0.9.11)
@@ -25,9 +29,20 @@ Python 3.6.9 and 2.7.11
 
 pylcs (tested on version 0.0.6)
 
+### Required R packages:
+CRAN:
+
+*readr, reshape2, tidyverse, shiny, DT*
+
+Bioconductor:
+
+*Gviz, GenomicRanges, BSgenome, BSgenome.Hsapiens.UCSC.hg19, BSgenome.Hsapiens.UCSC.hg38, BSgenome.Mmusculus.UCSC.mm10*
+
 
 ### Setup
 Clone the repository or download scripts to desired location. Either ``export`` the directory containing the scripts to ``PATH`` or add a line such as this ``export PATH="path\to\directory:$PATH"`` to the end of .bashrc file. Use command: `chmod +x directory/containing/pipeline/*` to make the scripts executable locally.
+
+For the Shiny app, place the riboxi_shinyapp directory anywhere as long as you can run R command on it.
 
 ### Usage
 You can go from fastqs all the way to count tables and visualization using ``riboxi_pipeline.sh``, or the python scripts and listed packages can be run separately which might be helpful in first few passes to optimize some of the options.
@@ -42,6 +57,11 @@ riboxi_pipeline.sh [file_containing_sample_list] [umi_length_as_number] [genome_
 ```
 In the directory where the pipeline is run, there will be intermediary files starting with "dt" and "trimmed" generated, which is from cutadapt read-through adapter trimming step. There are also assembled and unassembled read files from pear. These are for potential troubleshooting, and they can be automatically removed by uncommenting ``riboxi_pipeline.sh`` line 155-160. Trimming, read-merging, msi-priming filtering and de-duplication statistics can be found in files named as "[sample_name].report" or stdout.
 There will also be new directories named "bed_files" and "genomecov" in addition to one directory per sample for respective alignment output. The "bed_files" directory houses bed files and final count table, while the genomecov directory houses .genomecov files which can be directly uploaded to UCSC genome browser for visualization.
+
+**ShinyApp**
+The count table will be automatically comverted to ``raw_data_melt.rds`` by the ``data_table_prep.R``. This R data file is needed for the ShinyApp. Copy the .rds file into the riboxi_shinyapp directory and launch the app.
+The app allows extensive data filtering and counts visualization with gene models, which can then be easily downloaded. More capabilities, such as overlaying multiple samples, are in development.
+
 
 **To use scripts separately**:
 
@@ -64,5 +84,7 @@ riboxi_bed_parsing.py -b sample_names_separated_by_commas -s species(file in cur
 ## Sample data availability
 This is the current working pipeline that we are working with internally, of which sequencing data is not yet publicly available.
 Sequencing data from original publications: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE102516  and  https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE96999 can be analyzed using scripts from the legacy_pipeline directory. The differences are attibuted to changes in umi and linker designs.
+
+I have prepared some semi-dummy data and prcessed it through the entire pipeline into the ``raw_data_melt.rds``, which is included inside the app directory and can be used right away.
 
 ### Legacy scripts usage
