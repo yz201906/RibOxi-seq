@@ -9,6 +9,7 @@ require(Gviz)
 require(GenomicRanges)
 require(biomaRt)
 require(shiny)
+require(shinycssloaders)
 require(BSgenome)
 library(BSgenome.Hsapiens.UCSC.hg19)
 library(BSgenome.Hsapiens.UCSC.hg38)
@@ -35,13 +36,13 @@ ui <- fluidPage(
             width = 3
         ),
         mainPanel(
-            dataTableOutput("usr_selected"),
+            dataTableOutput("usr_selected") %>% withSpinner(color="#0dc5c1"),
             downloadButton("download_full_table", "Download table"),
             width = 9
         )
     ),
     # Other layouts ------------------------------------------------------------------------------------------------------------------------------------------
-    plotOutput("model_counts"),
+    plotOutput("model_counts") %>% withSpinner(color="#0dc5c1"),
 
     fluidRow(column(1, {
         downloadButton("download_pdf1", "Download plot")
@@ -61,7 +62,7 @@ ui <- fluidPage(
             downloadButton("download_pdf2", "Download plot"),
             width = 3
         ),
-        mainPanel(plotOutput('zoomed_in'),
+        mainPanel(plotOutput('zoomed_in')%>% withSpinner(color="#0dc5c1"),
                   width = 9)
     )
 )
