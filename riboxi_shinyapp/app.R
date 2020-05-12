@@ -16,6 +16,9 @@ library(BSgenome.Hsapiens.UCSC.hg38)
 library(BSgenome.Mmusculus.UCSC.mm10)
 
 raw_data <- readRDS("raw_data_melt.rds")
+ensemblm <-useEnsembl("ensembl", dataset = "mmusculus_gene_ensembl", mirror = "useast")
+ensemblh <-useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", mirror = "useast")
+gtrack <- GenomeAxisTrack()
 ### UI side ------------------------------------------------------------------------------------------------------------------------------------------
 ui <- fluidPage(
     shiny::tags$h1("RibOxi-seq Counts Visualization"),
@@ -24,7 +27,6 @@ ui <- fluidPage(
         sidebarPanel(
             selectizeInput('samples', 'Sample:', choices = NULL, multiple = TRUE),
             numericInput('min_counts', 'Single Base Minimum counts:', 50),
-#            actionButton('limit_sample', 'Show/Update Table'),
             selectizeInput('genes', 'Gene Symbol:', choices = NULL),
             selectInput(
                 'genome',
@@ -36,20 +38,18 @@ ui <- fluidPage(
             width = 3
         ),
         mainPanel(
-            dataTableOutput("usr_selected") %>% withSpinner(color="#0dc5c1"),
+            dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
             downloadButton("download_full_table", "Download table"),
             width = 9
         )
     ),
     # Other layouts ------------------------------------------------------------------------------------------------------------------------------------------
-    plotOutput("model_counts") %>% withSpinner(color="#0dc5c1"),
+    plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
 
     fluidRow(column(1, {
         downloadButton("download_pdf1", "Download plot")
     }),
-    column(1, offset = 2, {
-        downloadButton("download_individual_table", "Download table for this gene")
-    })),
+    ),
     shiny::tags$h1(
         " ____________________________________________________________________________________________________________________________________________________________________________"
     ),
@@ -62,8 +62,10 @@ ui <- fluidPage(
             downloadButton("download_pdf2", "Download plot"),
             width = 3
         ),
-        mainPanel(plotOutput('zoomed_in')%>% withSpinner(color="#0dc5c1"),
-                  width = 9)
+        mainPanel(
+            plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1"),
+            width = 9
+        )
     )
 )
 
@@ -79,51 +81,38 @@ server <- function (input, output, session) {
                          choices = unique(raw_data$sample_id),
                          server = TRUE)
 
-    my_sample_filtered <- reactive({
-        sample_filtered <- filter(raw_data, sample_id %in% input$samples)
-    })
-
     # Table ------------------------------------------------------------------------------------------------------------------------------------------
     full_table <- reactive({
         counts_filtered <-
-            subset(my_sample_filtered(), counts >= input$min_counts)
+            subset(raw_data, counts >= input$min_counts & sample_id %in% input$samples)
         filtered <-
-            counts_filtered[order(-counts_filtered$counts), ]
+            counts_filtered[order(-counts_filtered$counts),]
         filtered
     })
 
-    gene_table <- reactive({
-        gene_range <-
-            data.frame(seq(from = my_gene_to_plot_anno()@start, to = my_gene_to_plot_anno()@end))
-        colnames(gene_range) <- 'base'
-        gene_download <-
-            left_join(gene_range, my_gene_to_plot(), by = 'base')
-        gene_download <-
-            gene_download %>% replace_na(list(counts = 0))
-        gene_download$chr <- my_chr()
-        gene_download$gene <- input$genes
-        gene_download$sample_id <- input[['samples']][1]
-        gene_download
-    })
 
     # Plot components------------------------------------------------------------------------------------------------------------------------------------------
     my_ensembl <- reactive({
-        if (input$genome == "mm10") {
-            ensembl <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
+        if (my_gen() == "mm10") {
+            ensemblm
         }
         else {
-            ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+            ensemblh
         }
     })
 
     my_gene_to_plot <- eventReactive(input$gene_sample, {
         gene_to_plot <-
-            filter(my_sample_filtered(),
-                   gene == input$genes &
-                       sample_id == input[['samples']][1])
+            filter(raw_data,
+                   gene == input$genes & sample_id %in% input$samples)
+        gene_to_plot <- gene_to_plot%>%spread(sample_id, counts)
+        gene_to_plot$gene <- NULL
+        gene_to_plot$seq <- NULL
+        gene_to_plot
+
     })
 
-    my_gr <- eventReactive(input$gene_sample, {
+    my_gr <- reactive({
         gr <- makeGRangesFromDataFrame(
             my_gene_to_plot(),
             keep.extra.columns = TRUE,
@@ -146,15 +135,12 @@ server <- function (input, output, session) {
         dtrack <-
             DataTrack(
                 my_gr(),
-                name = input[['samples']][1],
+                name = "Nm Counts",
                 background.title = "blue",
                 fontsize = 15
             )
     })
 
-    my_gtrack <- eventReactive(input$gene_sample, {
-        gtrack <- GenomeAxisTrack()
-    })
 
     my_itrack <- eventReactive(input$gene_sample, {
         itrack <- IdeogramTrack(genome = my_gen(), chromosome = my_chr())
@@ -164,23 +150,17 @@ server <- function (input, output, session) {
         gene_to_plot_anno <-
             BiomartGeneRegionTrack(
                 biomart = my_ensembl(),
-                genome = input$genome,
+                genome = my_gen(),
                 symbol = input$genes
             )
     })
 
     my_position <- eventReactive(input$plot_zoomed, {
-        position <- input[['selected_site']]
-        position <- as.data.frame(position)
-        position <-
-            separate(position, 1, c('base', 'b', 'c'), sep = ':')
-        position$base <- as.numeric(position$base)
-        base_position <-
-            my_gene_to_plot() %>% filter(base == position$base)
+        base_position <- my_gene_to_plot() %>% filter(base == input$selected_site)
     })
 
     my_strack <- eventReactive(input$gene_sample, {
-        if (input$genome == "mm10") {
+        if (my_gen() == "mm10") {
             strack <- SequenceTrack(Mmusculus, chromosome = my_chr())
         }
         else {
@@ -214,13 +194,10 @@ server <- function (input, output, session) {
 
     # Outputs ------------------------------------------------------------------------------------------------------------------------------------------
     output$my_base_list <- renderUI({
-        for_list <-
-            my_gene_to_plot() %>% unite(my_list, base, sample_id, counts, sep = ":")
         selectInput(
             'selected_site',
             'Select a site:',
-            choices =  for_list$my_list,
-
+            choices =  my_gene_to_plot()$base,
             multiple = TRUE,
             selectize = FALSE
         )
@@ -232,10 +209,11 @@ server <- function (input, output, session) {
     output$model_counts <-
         renderPlot({
             plotTracks(
-                list(my_itrack(), my_gtrack(), my_dtrack(), my_grtrack()),
+                list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = "histogram"
+                type = c("confint", "p"),
+                groups = rep(c("WT", "KO")), aggregateGroups = TRUE, aggregation = "mean"
             )
         })
 
@@ -244,7 +222,7 @@ server <- function (input, output, session) {
             plotTracks(
                 list(
                     my_itrack(),
-                    my_gtrack(),
+                    gtrack,
                     my_dtrack(),
                     my_grtrack(),
                     my_strack()
@@ -253,7 +231,8 @@ server <- function (input, output, session) {
                 to = my_position()$base + 15,
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = "histogram"
+                type = c("confint", "p"),
+                groups = rep(c("WT", "KO")), aggregation = "mean"
             )
         })
 
@@ -264,14 +243,6 @@ server <- function (input, output, session) {
             write.csv(full_table(), file, row.names = FALSE)
         }
     )
-    output$download_individual_table <- downloadHandler(
-        filename = function() {
-            paste(input$genes, '_data_table.csv', sep = '')
-        },
-        content = function(file) {
-            write.csv(gene_table(), file, row.names = FALSE)
-        }
-    )
 
     output$download_pdf1 <- downloadHandler(
         filename = function() {
@@ -280,10 +251,11 @@ server <- function (input, output, session) {
         content = function(file) {
             pdf(file, width = 14, height = 6)
             plotTracks(
-                list(my_itrack(), my_gtrack(), my_dtrack(), my_grtrack()),
+                list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = "histogram"
+                type = c("confint", "p"),
+                groups = rep(c("WT", "KO")), aggregation = "mean"
             )
             dev.off()
         }
@@ -298,7 +270,7 @@ server <- function (input, output, session) {
             plotTracks(
                 list(
                     my_itrack(),
-                    my_gtrack(),
+                    gtrack,
                     my_dtrack(),
                     my_grtrack(),
                     my_strack()
@@ -307,7 +279,8 @@ server <- function (input, output, session) {
                 to = my_position()$base + 15,
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = "histogram"
+                type = c("confint", "p"),
+                groups = rep(c("WT", "KO")), aggregation = "mean"
             )
             dev.off()
         }
