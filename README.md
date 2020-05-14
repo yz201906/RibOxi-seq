@@ -6,6 +6,8 @@ Custom scripts for processing sequencing reads from fastqs to visualization and 
 ### Tested environment
 Ubuntu server 18.04 LTS 
 
+Ubuntu server 20.04 LTS 
+
 Python 3.6.9 and 2.7.11
 
 R 3.6.3
@@ -86,6 +88,7 @@ This is the current working pipeline that we are working with internally, of whi
 Sequencing data from original publications: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE102516  and  https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE96999 can be analyzed using scripts from the legacy_pipeline directory. The differences are attibuted to changes in umi and linker designs.
 
 I have prepared some sample data and prcessed it through the entire pipeline into the ``raw_data.RData``, which is included inside the app directory together with the data table prior to the processing. 
-**Note** Many of the genes in the sample data will not match the gene model track. The reason is that there are differences in genomic coordinates between different GTF files. In the case of sample data, the alignment was against NCBI gtf annotation file, but *biomaRt* package accesses ensembl database. Thus, it is recommended to also use ensemble gtf for alignment. 
+
+**Note**: Many of the genes in the sample data will not match the gene model track. The reason is that there are differences in genomic coordinates between different gtf files. In the case of sample data, the alignment was against NCBI gtf annotation file, but *biomaRt* package accesses ensembl database. Thus, it is recommended to also use ensembl gtf for alignment. 
 
 ### Legacy scripts usage
