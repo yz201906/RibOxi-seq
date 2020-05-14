@@ -156,7 +156,6 @@ Input samples: $samplelist
 Effective command: -b $samplelist -s $species -g $genome_path/$genome'_cut.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
 " >>"$read"".report"
 riboxi_bed_parsing.py -b "$samplelist" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
-data_table_prep.R
 cd ".."
 rm "$genome_path""/""$genome""_cut.gtf"
 rm "dt_*"

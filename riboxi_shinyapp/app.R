@@ -15,9 +15,15 @@ library(BSgenome.Hsapiens.UCSC.hg19)
 library(BSgenome.Hsapiens.UCSC.hg38)
 library(BSgenome.Mmusculus.UCSC.mm10)
 
-raw_data <- readRDS("raw_data_melt.rds")
-ensemblm <-useEnsembl("ensembl", dataset = "mmusculus_gene_ensembl", mirror = "useast")
-ensemblh <-useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", mirror = "useast")
+load("raw_data.RData")
+if (grepl('mm', args[3])) {
+    connection<-try(ensembl <- useMart("ensembl", host="http://useast.ensembl.org/", dataset = "mmusculus_gene_ensembl"))
+    if ("try-error" %in% class(connection)) ensembl <- useMart("ensembl", host="http://uswest.ensembl.org/", dataset = "mmusculus_gene_ensembl")
+} else {
+    connection<-try(ensembl <- useMart("ensembl", host="http://useast.ensembl.org/", dataset = "hsapiens_gene_ensembl"))
+    if ("try-error" %in% class(connection)) ensembl <- useMart("ensembl", host="http://uswest.ensembl.org/", dataset = "hsapiens_gene_ensembl")
+}
+
 gtrack <- GenomeAxisTrack()
 ### UI side ------------------------------------------------------------------------------------------------------------------------------------------
 ui <- fluidPage(
@@ -26,14 +32,9 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             selectizeInput('samples', 'Sample:', choices = NULL, multiple = TRUE),
-            numericInput('min_counts', 'Single Base Minimum counts:', 50),
+            numericInput('min_counts', 'Base position min mean counts:', 50),
             selectizeInput('genes', 'Gene Symbol:', choices = NULL),
-            selectInput(
-                'genome',
-                label = 'Genome:',
-                choices = c("mm10", "hg19", "hg38"),
-                selected = "mm10"
-            ),
+            uiOutput("my_chr_list"),
             actionButton('gene_sample', 'Plot'),
             width = 3
         ),
@@ -43,6 +44,7 @@ ui <- fluidPage(
             width = 9
         )
     ),
+
     # Other layouts ------------------------------------------------------------------------------------------------------------------------------------------
     plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
 
@@ -60,11 +62,11 @@ ui <- fluidPage(
             uiOutput("my_base_list"),
             actionButton('plot_zoomed', 'Plot'),
             downloadButton("download_pdf2", "Download plot"),
-            width = 3
+            width = 2
         ),
         mainPanel(
             plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1"),
-            width = 9
+            width = 10
         )
     )
 )
@@ -78,41 +80,41 @@ server <- function (input, output, session) {
                          server = TRUE)
     updateSelectizeInput(session,
                          'samples',
-                         choices = unique(raw_data$sample_id),
+                         choices = list(colnames(dplyr::select(raw_data, starts_with(args[1])|starts_with(args[2])))),
                          server = TRUE)
 
     # Table ------------------------------------------------------------------------------------------------------------------------------------------
+    selected_samples <- reactive({
+        sample_filtered <- dplyr::select(raw_data, chr, base, gene, seq, any_of(input$samples))
+        sample_filtered
+    })
+
     full_table <- reactive({
-        counts_filtered <-
-            subset(raw_data, counts >= input$min_counts & sample_id %in% input$samples)
+        sample_filtered <- mutate(selected_samples(), counts_mean=rowMeans(dplyr::select(selected_samples(), contains(args[1])|contains(args[2]))))
+        counts_filtered <- filter(sample_filtered, counts_mean >= input$min_counts)
         filtered <-
-            counts_filtered[order(-counts_filtered$counts),]
-        filtered
+            counts_filtered[order(-counts_filtered$counts_mean),]
     })
 
 
     # Plot components------------------------------------------------------------------------------------------------------------------------------------------
-    my_ensembl <- reactive({
-        if (my_gen() == "mm10") {
-            ensemblm
-        }
-        else {
-            ensemblh
-        }
+
+    my_grouping <- eventReactive(input$gene_sample, {
+        sample_list<-data.frame(str_split(input$samples, ' '))
+        Control_num<-dplyr::select(sample_list, contains(args[1]))
+        Treatment_num<-dplyr::select(sample_list, contains(args[2]))
+        grouping<-factor(c(rep(args[1], length(Control_num)), rep(args[2], length(Treatment_num))), levels = c(args[1], args[2]))
+        grouping
     })
 
-    my_gene_to_plot <- eventReactive(input$gene_sample, {
-        gene_to_plot <-
-            filter(raw_data,
-                   gene == input$genes & sample_id %in% input$samples)
-        gene_to_plot <- gene_to_plot%>%spread(sample_id, counts)
+    my_gene_to_plot <- reactive({
+        gene_to_plot <- filter(selected_samples(),gene == input$genes)
         gene_to_plot$gene <- NULL
         gene_to_plot$seq <- NULL
         gene_to_plot
-
     })
 
-    my_gr <- reactive({
+    my_gr <- eventReactive(my_gene_to_plot(),{
         gr <- makeGRangesFromDataFrame(
             my_gene_to_plot(),
             keep.extra.columns = TRUE,
@@ -123,12 +125,9 @@ server <- function (input, output, session) {
             end.field = "base"
         )
     })
-    my_chr <- eventReactive(input$gene_sample, {
-        chr <- as.character(unique(seqnames(my_gr())))
-    })
 
     my_gen <- eventReactive(input$gene_sample, {
-        gen <- input$genome
+        gen <- args[3]
     })
 
     my_dtrack <- eventReactive(input$gene_sample, {
@@ -143,16 +142,22 @@ server <- function (input, output, session) {
 
 
     my_itrack <- eventReactive(input$gene_sample, {
-        itrack <- IdeogramTrack(genome = my_gen(), chromosome = my_chr())
+        itrack <- IdeogramTrack(genome = my_gen(), chromosome = input$my_chr)
     })
 
     my_gene_to_plot_anno <- eventReactive(input$gene_sample, {
         gene_to_plot_anno <-
             BiomartGeneRegionTrack(
-                biomart = my_ensembl(),
+                biomart = ensembl,
                 genome = my_gen(),
-                symbol = input$genes
+                symbol = input$genes,
             )
+        gene_to_plot_anno
+    })
+
+    my_site_list <- eventReactive(input$gene_sample, {
+        site_list<-mutate(my_gene_to_plot(), counts_mean=rowMeans(dplyr::select(my_gene_to_plot(), contains(args[1])|contains(args[2]))))
+        site_list<-site_list[order(-site_list$counts_mean),]
     })
 
     my_position <- eventReactive(input$plot_zoomed, {
@@ -161,10 +166,10 @@ server <- function (input, output, session) {
 
     my_strack <- eventReactive(input$gene_sample, {
         if (my_gen() == "mm10") {
-            strack <- SequenceTrack(Mmusculus, chromosome = my_chr())
+            strack <- SequenceTrack(Mmusculus, chromosome = input$my_chr)
         }
         else {
-            strack <- SequenceTrack(Hsapiens, chromosome = my_chr())
+            strack <- SequenceTrack(Hsapiens, chromosome = input$my_chr)
         }
     })
 
@@ -180,7 +185,7 @@ server <- function (input, output, session) {
                 gene = gene(my_gene_to_plot_anno()),
                 symbol = symbol(my_gene_to_plot_anno()),
                 genome = my_gen(),
-                chromosome = my_chr(),
+                chromosome = input$my_chr,
                 name = "Gene Model",
                 transcriptAnnotation = "symbol",
                 fontsize = 15,
@@ -193,11 +198,22 @@ server <- function (input, output, session) {
     })
 
     # Outputs ------------------------------------------------------------------------------------------------------------------------------------------
+    output$my_chr_list <- renderUI({
+        chr_list <- as.character(unique(my_gene_to_plot()$chr))
+        if (length (str_split(chr_list, ' '))>1) {
+            chr_list <- str_split(chr_list, ' ')
+            chr_list
+        }
+        selectInput('my_chr', "Chromosome:", choices = chr_list, multiple = FALSE, selectize = FALSE)
+    })
+
+
     output$my_base_list <- renderUI({
+        my_site_list()
         selectInput(
             'selected_site',
             'Select a site:',
-            choices =  my_gene_to_plot()$base,
+            choices =  my_site_list()$base,
             multiple = TRUE,
             selectize = FALSE
         )
@@ -212,8 +228,10 @@ server <- function (input, output, session) {
                 list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = c("confint", "p"),
-                groups = rep(c("WT", "KO")), aggregateGroups = TRUE, aggregation = "mean"
+                type = c("p","boxplot"),
+                groups = my_grouping(),
+                add53 = TRUE, complement = TRUE,
+                transformation = function(x) { x[x < 0] <- 0; x }
             )
         })
 
@@ -231,8 +249,10 @@ server <- function (input, output, session) {
                 to = my_position()$base + 15,
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = c("confint", "p"),
-                groups = rep(c("WT", "KO")), aggregation = "mean"
+                type = c("p","boxplot"),
+                groups = my_grouping(),
+                add53 = TRUE, complement = TRUE,
+                transformation = function(x) { x[x < 0] <- 0; x }
             )
         })
 
@@ -254,8 +274,10 @@ server <- function (input, output, session) {
                 list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = c("confint", "p"),
-                groups = rep(c("WT", "KO")), aggregation = "mean"
+                type = c("p","boxplot"),
+                groups = my_grouping(),
+                add53 = TRUE, complement = TRUE,
+                transformation = function(x) { x[x < 0] <- 0; x }
             )
             dev.off()
         }
@@ -266,7 +288,7 @@ server <- function (input, output, session) {
             paste(input$genes, '_zoomed_in.pdf', sep = '')
         },
         content = function(file) {
-            pdf(file, width = 12, height = 6)
+            pdf(file, width = 12, height = 8)
             plotTracks(
                 list(
                     my_itrack(),
@@ -279,8 +301,10 @@ server <- function (input, output, session) {
                 to = my_position()$base + 15,
                 cex = 1.5,
                 background.panel = "#FFFEDB",
-                type = c("confint", "p"),
-                groups = rep(c("WT", "KO")), aggregation = "mean"
+                type = c("p","boxplot"),
+                groups = my_grouping(),
+                add53 = TRUE, complement = TRUE,
+                transformation = function(x) { x[x < 0] <- 0; x }
             )
             dev.off()
         }

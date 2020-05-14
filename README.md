@@ -59,7 +59,7 @@ In the directory where the pipeline is run, there will be intermediary files sta
 There will also be new directories named "bed_files" and "genomecov" in addition to one directory per sample for respective alignment output. The "bed_files" directory houses bed files and final count table, while the genomecov directory houses .genomecov files which can be directly uploaded to UCSC genome browser for visualization.
 
 **ShinyApp**
-The count table will be automatically comverted to ``raw_data_melt.rds`` by the ``data_table_prep.R``. This R data file is needed for the ShinyApp. Copy the .rds file into the riboxi_shinyapp directory and launch the app.
+The count data needs to be pre-processed for the shinyapp, to do this, run ``data_table_prep.R`` inside the directory where 'final_counts.tsv' is located with additional arguments for group parsing. For example, if one sample group is wild type and the other is knock down (if reference genome used for alignment is hg19), then: ``data_table_prep.R WT KD hg19``. An R session image will be saved with processed data table and neccessary variables that will be loaded by the shinyapp.
 The app allows extensive data filtering and counts visualization with gene models, which can then be easily downloaded. More capabilities, such as overlaying multiple samples, are in development.
 
 
@@ -85,6 +85,6 @@ riboxi_bed_parsing.py -b sample_names_separated_by_commas -s species(file in cur
 This is the current working pipeline that we are working with internally, of which sequencing data is not yet publicly available.
 Sequencing data from original publications: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE102516  and  https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE96999 can be analyzed using scripts from the legacy_pipeline directory. The differences are attibuted to changes in umi and linker designs.
 
-I have prepared some semi-dummy data and prcessed it through the entire pipeline into the ``raw_data_melt.rds``, which is included inside the app directory and can be used right away.
+I have prepared some sample data and prcessed it through the entire pipeline into the ``raw_data.RData``, which is included inside the app directory together with the data table prior to the processing.
 
 ### Legacy scripts usage
