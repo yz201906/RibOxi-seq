@@ -15,16 +15,27 @@ library(BSgenome.Hsapiens.UCSC.hg19)
 library(BSgenome.Hsapiens.UCSC.hg38)
 library(BSgenome.Mmusculus.UCSC.mm10)
 
+shinyOptions(cache = diskCache(file.path(dirname(tempdir()), "riboxi_shiny_cache")))
 load("raw_data.RData")
+
 if (grepl('mm', args[3])) {
-    connection<-try(ensembl <- useMart("ensembl", host="http://useast.ensembl.org/", dataset = "mmusculus_gene_ensembl"))
+    connection<-try(ensembl <- useMart("ensembl", dataset = "mmusculus_gene_ensembl"))
     if ("try-error" %in% class(connection)) ensembl <- useMart("ensembl", host="http://uswest.ensembl.org/", dataset = "mmusculus_gene_ensembl")
 } else {
-    connection<-try(ensembl <- useMart("ensembl", host="http://useast.ensembl.org/", dataset = "hsapiens_gene_ensembl"))
+    connection<-try(ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl"))
     if ("try-error" %in% class(connection)) ensembl <- useMart("ensembl", host="http://uswest.ensembl.org/", dataset = "hsapiens_gene_ensembl")
 }
 
 gtrack <- GenomeAxisTrack()
+my_gen <- args[3]
+
+if (grepl('mm', args[3])) {
+    my_strack <- SequenceTrack(Mmusculus)
+} else {
+    my_strack <- SequenceTrack(Hsapiens)
+}
+
+
 ### UI side ------------------------------------------------------------------------------------------------------------------------------------------
 ui <- fluidPage(
     shiny::tags$h1("RibOxi-seq Counts Visualization"),
@@ -47,7 +58,6 @@ ui <- fluidPage(
 
     # Other layouts ------------------------------------------------------------------------------------------------------------------------------------------
     plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
-
     fluidRow(column(1, {
         downloadButton("download_pdf1", "Download plot")
     }),
@@ -60,6 +70,7 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             uiOutput("my_base_list"),
+            sliderInput('window_size', "Select window size:", 10, 200, 30, step = 20),
             actionButton('plot_zoomed', 'Plot'),
             downloadButton("download_pdf2", "Download plot"),
             width = 2
@@ -114,7 +125,7 @@ server <- function (input, output, session) {
         gene_to_plot
     })
 
-    my_gr <- eventReactive(my_gene_to_plot(),{
+    my_gr <- eventReactive(input$gene_sample, {
         gr <- makeGRangesFromDataFrame(
             my_gene_to_plot(),
             keep.extra.columns = TRUE,
@@ -126,9 +137,7 @@ server <- function (input, output, session) {
         )
     })
 
-    my_gen <- eventReactive(input$gene_sample, {
-        gen <- args[3]
-    })
+
 
     my_dtrack <- eventReactive(input$gene_sample, {
         dtrack <-
@@ -142,16 +151,12 @@ server <- function (input, output, session) {
 
 
     my_itrack <- eventReactive(input$gene_sample, {
-        itrack <- IdeogramTrack(genome = my_gen(), chromosome = input$my_chr)
+        itrack <- IdeogramTrack(genome = my_gen, chromosome = input$my_chr)
     })
 
-    my_gene_to_plot_anno <- eventReactive(input$gene_sample, {
-        gene_to_plot_anno <-
-            BiomartGeneRegionTrack(
-                biomart = ensembl,
-                genome = my_gen(),
-                symbol = input$genes,
-            )
+    my_gene_to_plot_anno <- eventReactive(input$genes, {
+        gene_to_plot_anno <- BiomartGeneRegionTrack(biomart = ensembl,genome = my_gen,symbol = input$genes,)
+        ranges(gene_to_plot_anno) <- subset(ranges(gene_to_plot_anno), symbol == input$genes)
         gene_to_plot_anno
     })
 
@@ -164,14 +169,6 @@ server <- function (input, output, session) {
         base_position <- my_gene_to_plot() %>% filter(base == input$selected_site)
     })
 
-    my_strack <- eventReactive(input$gene_sample, {
-        if (my_gen() == "mm10") {
-            strack <- SequenceTrack(Mmusculus, chromosome = input$my_chr)
-        }
-        else {
-            strack <- SequenceTrack(Hsapiens, chromosome = input$my_chr)
-        }
-    })
 
     my_grtrack <- eventReactive(input$gene_sample, {
         grtrack <-
@@ -184,7 +181,7 @@ server <- function (input, output, session) {
                 transcript = transcript(my_gene_to_plot_anno()),
                 gene = gene(my_gene_to_plot_anno()),
                 symbol = symbol(my_gene_to_plot_anno()),
-                genome = my_gen(),
+                genome = my_gen,
                 chromosome = input$my_chr,
                 name = "Gene Model",
                 transcriptAnnotation = "symbol",
@@ -196,6 +193,8 @@ server <- function (input, output, session) {
                 background.title = "brown"
             )
     })
+
+    my_window_size <- reactive({input$window_size/2})
 
     # Outputs ------------------------------------------------------------------------------------------------------------------------------------------
     output$my_chr_list <- renderUI({
@@ -223,38 +222,40 @@ server <- function (input, output, session) {
         renderDT(full_table(), class = "display nowrap compact", filter = "top")
 
     output$model_counts <-
-        renderPlot({
+        renderCachedPlot({
             plotTracks(
                 list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
                 type = c("p","boxplot"),
                 groups = my_grouping(),
-                add53 = TRUE, complement = TRUE,
-                transformation = function(x) { x[x < 0] <- 0; x }
+                add53 = TRUE
             )
-        })
+        },
+        cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())}
+        )
 
     output$zoomed_in <-
-        renderPlot({
+        renderCachedPlot({
             plotTracks(
                 list(
                     my_itrack(),
                     gtrack,
                     my_dtrack(),
                     my_grtrack(),
-                    my_strack()
+                    my_strack
                 ),
-                from = my_position()$base - 15,
-                to = my_position()$base + 15,
+                from = my_position()$base - my_window_size(),
+                to = my_position()$base + my_window_size(),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
                 type = c("p","boxplot"),
                 groups = my_grouping(),
-                add53 = TRUE, complement = TRUE,
-                transformation = function(x) { x[x < 0] <- 0; x }
+                add53 = TRUE
             )
-        })
+        },
+        cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_position(), my_grouping(), my_window_size())}
+        )
 
     # Downloads ------------------------------------------------------------------------------------------------------------------------------------------
     output$download_full_table <- downloadHandler(
@@ -276,8 +277,7 @@ server <- function (input, output, session) {
                 background.panel = "#FFFEDB",
                 type = c("p","boxplot"),
                 groups = my_grouping(),
-                add53 = TRUE, complement = TRUE,
-                transformation = function(x) { x[x < 0] <- 0; x }
+                add53 = TRUE
             )
             dev.off()
         }
@@ -295,16 +295,15 @@ server <- function (input, output, session) {
                     gtrack,
                     my_dtrack(),
                     my_grtrack(),
-                    my_strack()
+                    my_strack
                 ),
-                from = my_position()$base - 15,
-                to = my_position()$base + 15,
+                from = my_position()$base - my_window_size(),
+                to = my_position()$base + my_window_size(),
                 cex = 1.5,
                 background.panel = "#FFFEDB",
                 type = c("p","boxplot"),
                 groups = my_grouping(),
-                add53 = TRUE, complement = TRUE,
-                transformation = function(x) { x[x < 0] <- 0; x }
+                add53 = TRUE
             )
             dev.off()
         }
