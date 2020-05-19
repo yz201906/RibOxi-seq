@@ -45,8 +45,9 @@ In the directory where the pipeline is run, there will be intermediary files sta
 There will also be new directories named "bed_files" and "genomecov" in addition to one directory per sample for respective alignment output. The "bed_files" directory houses bed files and final count table, while the genomecov directory houses .genomecov files which can be directly uploaded to UCSC genome browser for visualization.  
   
 **ShinyApp**  
-The count data needs to be pre-processed for the shinyapp, to do this, run ``data_table_prep.R`` inside the directory where 'final_counts.tsv' is located with additional arguments for group parsing. For example, if one sample group is wild type and the other is knock down (Names: WT_something KD_something, reference genome used for alignment is hg19), then: 
+The count data needs to be pre-processed for the shinyapp, to do this, run ``data_table_prep.R`` inside the directory where 'final_counts.tsv' is located with additional arguments for group parsing. For example, if one sample group is wild type and the other is knock down (Names: WT_something KD_something, reference genome used for alignment is hg19), then:  
 ```data_table_prep.R WT KD hg19```
+
 An R session image will be saved with processed data table and neccessary variables that will be loaded by the shinyapp.
 The app allows extensive data filtering and counts visualization with gene models, which can then be easily downloaded. More capabilities, such as overlaying multiple samples, are in development.  
 
@@ -72,7 +73,7 @@ Sequencing data from original publications: https://www.ncbi.nlm.nih.gov/geo/que
 
 I have prepared some sample data and prcessed it through the entire pipeline into the ``raw_data.RData``, which is included inside the app directory together with the data table prior to the processing. 
 
-**Note**: Many of the genes in the sample data will not match the gene model track. The reason is that there are differences in genomic coordinates between different gtf files. In the case of sample data, the alignment was against NCBI gtf annotation file, but *biomaRt* package accesses ensembl database. Thus, it is recommended to also use ensembl gtf for alignment. 
+**Note**: Many of the genes in the sample data will not match the gene model track. The reason is that there are differences in genomic coordinates between different gtf files. In the case of sample data, the alignment was against NCBI gtf annotation file, but *biomaRt* package accesses ensembl database. Thus, it is recommended to also use ensembl gtf for alignment.  
 **Upddate**: I have replaced sample data with mouse data (mm10 reference genome), which does not have above issues.  
 
 ### Legacy scripts usage
