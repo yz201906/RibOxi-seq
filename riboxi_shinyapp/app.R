@@ -221,39 +221,36 @@ server <- function (input, output, session) {
     output$usr_selected <-
         renderDT(full_table(), class = "display nowrap compact", filter = "top")
 
-    output$model_counts <-
-        renderCachedPlot({
-            plotTracks(
-                list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
-                cex = 1.5,
-                background.panel = "#FFFEDB",
-                type = c("p","boxplot"),
-                groups = my_grouping(),
-                add53 = TRUE
-            )
-        },
+
+    gene_plot <- function(itrack, dtrack, grtrack, groups, position = NULL, window_size = NULL,  font_size = 1.5) {
+            if (!is.null(position) & !is.null(window_size)) {
+                plotTracks(
+                    list(itrack, gtrack, dtrack, grtrack, my_strack),
+                    cex = font_size,
+                    background.panel = "#FFFEDB",
+                    type = c("p","boxplot"),
+                    groups = groups,
+                    add53 = TRUE,
+                    from = position$base - window_size,
+                    to = position$base + window_size)
+            } else {
+                plotTracks(
+                    list(itrack, gtrack, dtrack, grtrack),
+                    cex = font_size,
+                    background.panel = "#FFFEDB",
+                    type = c("p","boxplot"),
+                    groups = groups,
+                    add53 = TRUE,
+                )
+            }
+    }
+
+    output$model_counts <- renderCachedPlot({
+        gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())},
         cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())}
         )
-
-    output$zoomed_in <-
-        renderCachedPlot({
-            plotTracks(
-                list(
-                    my_itrack(),
-                    gtrack,
-                    my_dtrack(),
-                    my_grtrack(),
-                    my_strack
-                ),
-                from = my_position()$base - my_window_size(),
-                to = my_position()$base + my_window_size(),
-                cex = 1.5,
-                background.panel = "#FFFEDB",
-                type = c("p","boxplot"),
-                groups = my_grouping(),
-                add53 = TRUE
-            )
-        },
+    output$zoomed_in <- renderCachedPlot({
+        gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping(), my_position(), my_window_size())},
         cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_position(), my_grouping(), my_window_size())}
         )
 
@@ -271,13 +268,9 @@ server <- function (input, output, session) {
         },
         content = function(file) {
             pdf(file, width = 14, height = 6)
-            plotTracks(
-                list(my_itrack(), gtrack, my_dtrack(), my_grtrack()),
-                cex = 1.5,
-                background.panel = "#FFFEDB",
-                type = c("p","boxplot"),
-                groups = my_grouping(),
-                add53 = TRUE
+            output$model_counts <- renderCachedPlot({
+                gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())},
+                cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())}
             )
             dev.off()
         }
@@ -289,21 +282,9 @@ server <- function (input, output, session) {
         },
         content = function(file) {
             pdf(file, width = 12, height = 8)
-            plotTracks(
-                list(
-                    my_itrack(),
-                    gtrack,
-                    my_dtrack(),
-                    my_grtrack(),
-                    my_strack
-                ),
-                from = my_position()$base - my_window_size(),
-                to = my_position()$base + my_window_size(),
-                cex = 1.5,
-                background.panel = "#FFFEDB",
-                type = c("p","boxplot"),
-                groups = my_grouping(),
-                add53 = TRUE
+            output$zoomed_in <- renderCachedPlot({
+                gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping(), my_position(), my_window_size())},
+                cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_position(), my_grouping(), my_window_size())}
             )
             dev.off()
         }
