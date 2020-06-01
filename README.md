@@ -36,7 +36,8 @@ You can go from fastqs all the way to count tables and visualization using ``rib
 **Note:** 
 The pipeline and scripts assumes read structures demonstrated in the workflow pdf file, that is, randomer sequence at the 3'-end of read1 sequence and [in-line barcode+linker] at the 3'-end of read 2 seuqnece (while the in-line barcode is at the very end relative to the rest of the linker).  
 For species of interest, place a file containing chromosome names under the directory where the pipeline is run. The file should have exact same name as the input for species. The chromosomes should be in a single line separated by commas. e.g.:
-`chr1,chr2,chr3,chr4,chr5,chr6,chr7 `  
+`chr1,chr2,chr3,chr4,chr5,chr6,chr7` or `1, 2, 3, 4, 5, 6, 7...`.  
+Just be consistent with your .gtf file.  
 **To run the entire pipeline**, first make sure to place a file with samples names (one sample per line) inthe same directory with fastq files; also make sure that you have already generated 2bit genome with the same basename to your reference genome and it is placed in the same directory with your index; then run:  
 ```
 riboxi_pipeline.sh [file_containing_sample_list] [umi_length_as_number] [genome_path] [genome_basename] [species_exactly_as_mentioned_above] [3'-adapter_sequence] [in-line_barcode_sequence] [number_of_cpu_threads](optional, default: 1)
@@ -49,7 +50,7 @@ The count data needs to be pre-processed for the shinyapp, to do this, run ``dat
 ```data_table_prep.R WT KD hg19```
 
 An R session image will be saved with processed data table and neccessary variables that will be loaded by the shinyapp.
-The app allows extensive data filtering and counts visualization with gene models, which can then be easily downloaded. More capabilities, such as overlaying multiple samples, are in development.  
+The app allows extensive data filtering and counts visualization with gene models, which can then be easily downloaded.  
 
 **To use scripts separately**:  
 ``move_umi.py``: make sure read-through adapters are trimmed and R1 and R2 are merged into a single read. Run:
@@ -57,14 +58,16 @@ The app allows extensive data filtering and counts visualization with gene model
 move_umi.py -r input_fastq -l length_of_umi_as_number -o output_name -i sequence_of_in-line_barcode -a 3'-adapter_sequence
 ```
 To generate the count table:  
-Place your reference_genome.2bit in the same directory with reference genome of interest and make sure they have same base_name.
-Prepare the genome annotation file (GTF used here) by cutting out the portion that will not be used:  
+Place your reference_genome.2bit in the same directory with reference genome of interest and make sure they have same base_name.  
+Subset your original gtf in the following fashion (**Note**: The naming of the features are from Esembl):
 ```javascript
-cat "path/to/genome/genome.gtf" | cut -d";" -f1 > "path/to/genome/genome_cut.gtf"
+grep $'\t'"gene"$'\t' genome.gtf > genome_subset.gtf
+grep 'protein_coding' genome_subset.gtf > genome_coding.gtf
+grep -v 'protein_coding' genome_subset.gtf | grep -v "misc_RNA" > genome_non_coding.gtf
 ```
 Then navigate to where bed files are and run:  
 ```javascript
-riboxi_bed_parsing.py -b sample_names_separated_by_commas -s species(file in current dir) -g path/to/genome/genome_cut.gtf -2b genome_name.2bit/path -c [optional: number of cpu processes]
+riboxi_bed_parsing.py -b sample_names_separated_by_commas -s species(file in current dir) -g path/to/generated/gtf/basename -2b path/to/genome_name.2bit/ -c [optional: number of cpu processes]
 ```
 
 ## Sample data availability
@@ -76,5 +79,7 @@ I have prepared some sample data and prcessed it through the entire pipeline int
 **Note**: Many of the genes in the sample data will not match the gene model track. The reason is that there are differences in genomic coordinates between different gtf files. In the case of sample data, the alignment was against NCBI gtf annotation file, but *biomaRt* package accesses ensembl database. Thus, it is recommended to also use ensembl gtf for alignment.  
 **Upddate**: I have replaced sample data with mouse data (mm10 reference genome), which does not have above issues.  
 
-### Legacy scripts usage
-TODO
+### TODO  
+1. Nm scores  
+2. basic stats  
+3. Legacy scripts usage  
