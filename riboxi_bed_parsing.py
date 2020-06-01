@@ -57,9 +57,15 @@ except CannotOpenFile:
     print("cannot be located, please ensure the path is correct.")
     sys.exit(1)
 
-input_samples = (args.bed_files.lstrip(' ')).rstrip(' ')
-if '  ' in args.bed_files:
-    file_list = line_2_list(input_samples, '  ')
+threads = 1
+if args.cpu_threads:
+    threads = num_str_to_int(args.cpu_threads)
+    if threads >= mp.cpu_count():
+        threads = mp.cpu_count() - 1
+
+input_samples = args.bed_files.strip(' ')
+if ' ' in args.bed_files:
+    file_list = line_2_list(input_samples, ' ')
 else:
     file_list = [input_samples]
 print(file_list)
@@ -72,23 +78,28 @@ for csv in glob.glob("*.csv"):
     os.remove(csv)
 for tsv in glob.glob("*.tsv"):
     os.remove(tsv)
-gtf_dict = {}
-gtf_list_dict = {}
-with open(args.gtf, 'r') as annotation:
+coding_dict = {}
+non_coding_dict = {}
+with open(args.gtf+'_coding.gtf', 'r') as annotation:
     for line in annotation:
         line_list = line_2_list(line, '\t')
-        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), (line_2_list(line, ' '))[1].strip('\"'),
-                     gtf_dict)
-
-for chromosome in sorted(gtf_dict):
-    for gene in gtf_dict[chromosome]:
-        if chromosome not in gtf_list_dict:
-            gtf_list_dict.update({chromosome: [[gtf_dict[chromosome][gene][0], gtf_dict[chromosome][gene][1], gene]]})
-        else:
-            gtf_list_dict[chromosome].append([gtf_dict[chromosome][gene][0], gtf_dict[chromosome][gene][1], gene])
-
-for chromosome in gtf_list_dict:
-    gtf_list_dict[chromosome] = sorted(gtf_list_dict[chromosome])
+        gtf_gene_info = line_2_list((line_list.pop(8)), ";")
+        for naming in gtf_gene_info:
+            if "gene_name" in naming:                              #Parse for gene names
+                gtf_gene_name = line_2_list(naming, " ")[2]
+        if line_list[0] not in all_chromosomes:
+            continue
+        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), gtf_gene_name.strip('\"'), coding_dict)
+with open(args.gtf+'_non_coding.gtf', 'r') as annotation:
+    for line in annotation:
+        line_list = line_2_list(line, '\t')
+        gtf_gene_info = line_2_list((line_list.pop(8)), ";")
+        for naming in gtf_gene_info:
+            if "gene_name" in naming:                              #Parse for gene names
+                gtf_gene_name = line_2_list(naming, " ")[2]
+        if line_list[0] not in all_chromosomes:
+            continue
+        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), gtf_gene_name.strip('\"'), non_coding_dict)
 
 pos_dict = {}
 for sample in file_list:
@@ -97,9 +108,8 @@ for sample in file_list:
             line_list = line_2_list(line, '\t')
             if line_list[0] not in all_chromosomes:
                 continue
-            chr_base_dictionary(line_list[0], int(line_list[1]) + 1, int(line_list[2]), line_list[5], pos_dict,
-                                gtf_list_dict)
-
+            chr_base_dictionary(line_list[0], int(line_list[1]) + 1, int(line_list[2]), line_list[5], pos_dict, coding_dict, non_coding_dict)
+      
 for sample in file_list:
     tmp_dict = copy.deepcopy(
         pos_dict)  # making a deep copy of the dict for each sample, so counts are recorded separately
@@ -131,11 +141,6 @@ header = header_list[0] + '\t' + header_list[2] + '\t' + 'seq' + '\t' + '\t' + h
 final_file.write(header)
 all_counts.close()
 
-threads = 1
-if args.cpu_threads:
-    threads = num_str_to_int(args.cpu_threads)
-    if threads >= mp.cpu_count():
-        threads = mp.cpu_count() - 1
 pool = mp.Pool(threads)
 print("Using " + str(threads) + " cpu threads to generate table annotation...")
 with open('all_counts.tsv', 'r') as counts:

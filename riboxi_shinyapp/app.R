@@ -3,25 +3,25 @@
 # Objective : Shiny app that allows visualization based on gene symbol and enables various statistics.
 # Created by: yinzh
 # Created on: 5/4/2020
-require(tidyverse)
-require(DT)
-require(Gviz)
-require(GenomicRanges)
-require(biomaRt)
-require(shiny)
-require(shinycssloaders)
-require(BSgenome)
-library(BSgenome.Hsapiens.UCSC.hg19)
-library(BSgenome.Hsapiens.UCSC.hg38)
-library(BSgenome.Mmusculus.UCSC.mm10)
+library(tidyverse)
+library(DT)
+library(Gviz)
+library(GenomicRanges)
+library(biomaRt)
+library(shiny)
+library(shinycssloaders)
+library(BSgenome)
 
 shinyOptions(cache = diskCache(file.path(dirname(tempdir()), "riboxi_shiny_cache")))
 load("raw_data.RData")
 
 if (grepl('mm', args[3])) {
+    library(BSgenome.Mmusculus.UCSC.mm10)
     connection<-try(ensembl <- useMart("ensembl", dataset = "mmusculus_gene_ensembl"))
     if ("try-error" %in% class(connection)) ensembl <- useMart("ensembl", host="http://uswest.ensembl.org/", dataset = "mmusculus_gene_ensembl")
 } else {
+    library(BSgenome.Hsapiens.UCSC.hg19)
+    library(BSgenome.Hsapiens.UCSC.hg38)
     connection<-try(ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl"))
     if ("try-error" %in% class(connection)) ensembl <- useMart("ensembl", host="http://uswest.ensembl.org/", dataset = "hsapiens_gene_ensembl")
 }
@@ -126,8 +126,9 @@ server <- function (input, output, session) {
     })
 
     my_gr <- eventReactive(input$gene_sample, {
+        my_gene <- filter(my_gene_to_plot(), chr==input$my_chr)
         gr <- makeGRangesFromDataFrame(
-            my_gene_to_plot(),
+            my_gene,
             keep.extra.columns = TRUE,
             ignore.strand = TRUE,
             starts.in.df.are.0based = TRUE,
@@ -268,10 +269,7 @@ server <- function (input, output, session) {
         },
         content = function(file) {
             pdf(file, width = 14, height = 6)
-            output$model_counts <- renderCachedPlot({
-                gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())},
-                cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())}
-            )
+            gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())
             dev.off()
         }
     )
@@ -282,10 +280,7 @@ server <- function (input, output, session) {
         },
         content = function(file) {
             pdf(file, width = 12, height = 8)
-            output$zoomed_in <- renderCachedPlot({
-                gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping(), my_position(), my_window_size())},
-                cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_position(), my_grouping(), my_window_size())}
-            )
+            gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping(), my_position(), my_window_size())
             dev.off()
         }
     )

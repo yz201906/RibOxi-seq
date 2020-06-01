@@ -6,7 +6,6 @@ Created on Thu Mar 01 18:21:10 2018
 @author: yinzh
 """
 from os import popen
-
 from house_keeping_functions import *
 
 
@@ -27,56 +26,51 @@ def trim_quality(read_quality, umi_length):
 def get_gtf_dict(chromosome, start, end, gene_id, gtf_dict):
     """Parses GTF annotation lines and generate gtf_dictionary that has chromosomal information for each gene."""
     if chromosome not in gtf_dict:
-        gtf_dict.update({chromosome: {gene_id: [start, end]}})
+        gtf_dict.update({chromosome: [[start, end, gene_id]]})
     else:
-        if gene_id not in gtf_dict[chromosome]:
-            gtf_dict[chromosome].update({gene_id: [start, end]})
-        else:
-            if start < gtf_dict[chromosome][gene_id][0]:
-                gtf_dict[chromosome][gene_id][0] = start
-            if end > gtf_dict[chromosome][gene_id][1]:
-                gtf_dict[chromosome][gene_id][1] = end
+        gtf_dict[chromosome].append([start, end, gene_id])
 
-
-def find_gene_id(base_list, base, left, right):
+def find_gene_id(chromosomes, base):
     """Takes a list as input (a list of [start position, end position, gene id] *pre-sorted*). Also takes in the
     arguments of base position, 0, length of list, which are used to search the base position in the list and returns
     the corresponding gene id. Implemented with binary search"""
-    while left <= right:
-        mid = left + (right - left) // 2
-        if base_list[mid][0] <= base <= base_list[mid][1]:
-            return base_list[mid][2]
-        elif base_list[mid][0] > base:
-            right = mid - 1
-        elif base_list[mid][1] < base:
-            left = mid + 1
+    for gene_intervals in chromosomes:
+        if (base <= int(gene_intervals[1])) & (base >= int(gene_intervals[0])):
+            return gene_intervals[2]
     return -1
 
-
-def chr_base_dictionary(chromosome, start, end, strand, pos_dict, gtf_list_dict):
+def chr_base_dictionary(chromosome, start, end, strand, pos_dict, coding_dict, non_coding_dict):
     """Takes an empty or non-empty dictionary and an annotation dictionary (gtf_list_dict). Create a list inside
     dictionary inside dictionary nested structure in dict {Chr1:{3'end position:[count, gene id, strandedness]}}. """
+
     if strand == '+':
         if chromosome in pos_dict:
             if end not in pos_dict[chromosome]:
-                gene_id = find_gene_id(gtf_list_dict[chromosome], end, 0, len(gtf_list_dict[chromosome]) - 1)
-                if gene_id != -1:
+                gene_id = find_gene_id(non_coding_dict[chromosome], end)
+                if gene_id == -1:
+                    gene_id = find_gene_id(coding_dict[chromosome], end)
+                if gene_id != -1:    
                     pos_dict[chromosome].update({end: [0, gene_id, strand]})
         else:
-            gene_id = find_gene_id(gtf_list_dict[chromosome], end, 0, len(gtf_list_dict[chromosome]) - 1)
+            gene_id = find_gene_id(non_coding_dict[chromosome], end)
+            if gene_id == -1:
+                gene_id = find_gene_id(coding_dict[chromosome], end)
             if gene_id != -1:
                 pos_dict.update({chromosome: {end: [0, gene_id, strand]}})
     else:
         if chromosome in pos_dict:
             if start not in pos_dict[chromosome]:
-                gene_id = find_gene_id(gtf_list_dict[chromosome], start, 0, len(gtf_list_dict[chromosome]) - 1)
+                gene_id = find_gene_id(non_coding_dict[chromosome], start)
+                if gene_id == -1:
+                    gene_id = find_gene_id(coding_dict[chromosome], start)
                 if gene_id != -1:
                     pos_dict[chromosome].update({start: [0, gene_id, strand]})
         else:
-            gene_id = find_gene_id(gtf_list_dict[chromosome], start, 0, len(gtf_list_dict[chromosome]) - 1)
+            gene_id = find_gene_id(non_coding_dict[chromosome], start)
+            if gene_id == -1:
+                gene_id = find_gene_id(coding_dict[chromosome], start)
             if gene_id != -1:
                 pos_dict.update({chromosome: {start: [0, gene_id, strand]}})
-
 
 def update_tmp_dictionary(chromosome, start, end, strand, tmp_dict):
     """Takes a nested dictionary object along with chromosome number, start, end positions and strandedness as input.
@@ -114,6 +108,10 @@ def get_annotated_table(table_row, genome_2_bit):
     if line_list[2] == '-':
         seq_rc = reverse_compliment(seq)
         seq = seq_rc
-    out_string = line_list[0] + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + '\t' + \
+    if 'chr' not in line_list[0]:
+        chr_str = 'chr' + line_list[0]
+    else:
+        chr_str = line_list[0]
+    out_string = chr_str + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + '\t' + \
                  line_2_list(table_row, '_\t')[1] + '\n'
     return out_string

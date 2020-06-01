@@ -143,7 +143,9 @@ Generating genome coverage...
   cd ../
 done
 # shellcheck disable=SC2002
-cat "$genome_path""/""$genome"".gtf" | cut -d";" -f1 >"$genome_path""/""$genome""_cut.gtf" #Cut out everything after first ";" from every row of the GTF file for easier parsing
+grep $'\t'"gene"$'\t' $genome_path'/'$genome'.gtf' > $genome'_subset.gtf'
+grep 'protein_coding' $genome'_subset.gtf' > $genome'_coding.gtf'
+grep -v 'protein_coding' $genome'_subset.gtf' | grep -v misc_RNA > $genome'_non_coding.gtf'
 cd "bed_files"
 echo "
 
@@ -153,11 +155,14 @@ Counting 3' ends and generating count table...
 "
 echo "
 Input samples: $samplelist
-Effective command: -b $samplelist -s $species -g $genome_path/$genome'_cut.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
+Effective command: -b $samplelist -s $species -g '../'$genome'_subset.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
 " >>"$read"".report"
-riboxi_bed_parsing.py -b "$samplelist" -s "$species" -g "$genome_path"/"$genome"'_cut.gtf' -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
+
+riboxi_bed_parsing.py -b "$samplelist" -s "$species" -g '../'$genome -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
 cd ".."
-rm "$genome_path""/""$genome""_cut.gtf"
+rm $genome"_non_coding.gtf"
+rm $genome"_coding.gtf"
+rm $genome"_subset.gtf"
 rm "dt_*"
 #rm "trimmed_*"
 #rm_"umi_removed_"
