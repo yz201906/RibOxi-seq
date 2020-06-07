@@ -112,6 +112,5 @@ def get_annotated_table(table_row, genome_2_bit):
         chr_str = 'chr' + line_list[0]
     else:
         chr_str = line_list[0]
-    out_string = chr_str + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + '\t' + \
-                 line_2_list(table_row, '_\t')[1] + '\n'
+    out_string = chr_str + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + line_2_list(table_row, '_\t')[1] + '\n'
     return out_string

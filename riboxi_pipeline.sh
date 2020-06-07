@@ -145,7 +145,7 @@ done
 # shellcheck disable=SC2002
 grep $'\t'"gene"$'\t' $genome_path'/'$genome'.gtf' > $genome'_subset.gtf'
 grep 'protein_coding' $genome'_subset.gtf' > $genome'_coding.gtf'
-grep -v 'protein_coding' $genome'_subset.gtf' | grep -v misc_RNA > $genome'_non_coding.gtf'
+grep -v 'protein_coding' $genome'_subset.gtf' | grep -v "misc_RNA" > $genome'_non_coding.gtf'
 cd "bed_files"
 echo "
 
