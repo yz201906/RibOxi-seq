@@ -224,11 +224,11 @@ and oxidized samples. <img src="qc.png" width="651" />
 
 ## Primers & Oligos
 
-NEB miRNA linker 5´-/rApp/CTGTAGGCACCATCAAT/NH2/- 3´  
-RibOxi RT Primer
-5’-GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCTNNNNNNATTGATGGTGCCTACAG-3’  
-5’RNA linker 5’-/Biosg/ACACUCUUUCCCUACACGACGCUCUUCCGAUCUNNNN-3’  
-PCR\_i5
-5’-aatgatacggcgaccaccgagatctacac-i5(8nt)-acactctttccctacacgacgctcttccgatct-3’  
-PCR\_i7
-5’-caagcagaagacggcatacgagat-i7(8nt)-gtgactggagttcagacgtgtgctcttccgatct-3’
+  - NEB miRNA linker (3’- linker) 5´-/rApp/CTGTAGGCACCATCAAT/NH2/- 3´  
+  - RibOxi RT Primer
+    5’-GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCTNNNNNNATTGATGGTGCCTACAG-3’  
+  - 5’RNA linker 5’-/Biosg/ACACUCUUUCCCUACACGACGCUCUUCCGAUCUNNNN-3’  
+  - PCR\_i5
+    5’-aatgatacggcgaccaccgagatctacac-i5(8nt)-acactctttccctacacgacgctcttccgatct-3’  
+  - PCR\_i7
+    5’-caagcagaagacggcatacgagat-i7(8nt)-gtgactggagttcagacgtgtgctcttccgatct-3’
