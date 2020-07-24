@@ -44,26 +44,30 @@ for read in $samplelist; do
       -o 'dt_'"$read"'_R1.fastq' \
       -p 'dt_'"$read"'_R2.fastq' "$read"'_R1.fastq' "$read"'_R2.fastq' >"$read"'.report'
     #Use PEAR to merge Read1s and Read2s into a single read
+    
     echo "
 
 
 Merging PE reads with PEAR..."
+    
     echo "Effective command: -f 'dt_'$read'_R1.fastq' -r 'dt_'$read'_R2.fastq' -o $read -n 20 -j $cpu_threads" >>"$read"'.report'
     pear -f 'dt_'"$read"'_R1.fastq' -r 'dt_'"$read"'_R2.fastq' -o "$read" -n 20 -j $cpu_threads >>"$read"'.report'
-    #Move the UMI from reads to read identifier line (first line of each fastq record). Also discard reads that do not contain in-line barcode
+    #Merge Read1 and Read2 into single forward read
+    
     echo "
 
 
 Moving UMIs to read names..."
     echo "Effective command: -r $read'.assembled.fastq' -l $umi_length -o 'umiRemoved_'$read -i $in_line_barcode -a $adaptor_sequence" >>"$read"'.report'
     move_umi.py -r "$read"'.assembled.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adaptor_sequence" -m 'pipeline' >>"$read"".report"
-    #Remove 3' inline barcode for mis-priming mitigation
+    #Move the UMI from reads to read identifier line (first line of each fastq record). Also discard reads that do not contain in-line barcode
     echo "
 
 
 Triming 3' adapter...
 
     "
+    #Remove 3'-adapter including 3' inline barcode
     cutadapt -j $cpu_threads \
       --discard-untrimmed \
       --minimum-length 20 \
@@ -163,8 +167,8 @@ cd ".."
 rm $genome"_non_coding.gtf"
 rm $genome"_coding.gtf"
 rm $genome"_subset.gtf"
-rm "dt_*"
-#rm "trimmed_*"
-#rm_"umi_removed_"
-#rm "assembled_*"
-rm "unassembled_*"
+rm dt_*
+#rm trimmed_*
+#rm umi_removed_
+#rm assembled_*
+rm unassembled_*

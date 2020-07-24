@@ -34,7 +34,7 @@ For the Shiny app, place the riboxi_shinyapp directory anywhere as long as you c
 You can go from fastqs all the way to count tables and visualization using ``riboxi_pipeline.sh``, or the python scripts and listed packages can be run separately which might be helpful in first few passes to optimize some of the options.  
   
 **Note:** 
-The pipeline and scripts assumes read structures demonstrated in the workflow pdf file, that is, randomer sequence at the 3'-end of read1 sequence and [in-line barcode+linker] at the 3'-end of read 2 seuqnece (while the in-line barcode is at the very end relative to the rest of the linker).  
+The pipeline and scripts assumes read structures demonstrated in the workflow pdf file, that is, randomer sequence at the 3'-end of read1 sequence and [in-line barcode+linker] at the 5'-end of read 2 seuqnece (while the in-line barcode is at the very end relative to the rest of the linker).  
 For species of interest, place a file containing chromosome names under the directory where the pipeline is run. The file should have exact same name as the input for species. The chromosomes should be in a single line separated by commas. e.g.:
 `chr1,chr2,chr3,chr4,chr5,chr6,chr7` or `1, 2, 3, 4, 5, 6, 7...`.  
 Just be consistent with your .gtf file.  

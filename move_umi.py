@@ -52,7 +52,8 @@ try:  # If parameters are not from pipeline, check input.
         # noinspection PyUnresolvedReferences
         for line1, line2, line3, line4 in itertools.zip_longest(*[read2] * 4):
             reads_in += 1
-            if sequence_compare(line2[len(line2) - len(args.adapter_sequence) - 1:len(line2):],
+            if sequence_compare(line2[(len(line2) - len(args.adapter_sequence) - 1):(
+                    len(line2) - len(args.adapter_sequence) - 1 + len(args.in_line_barcode)):],
                                 args.in_line_barcode) == 2:
                 continue
             processed_reads = move_umi(line1, line2, int(args.umi_length))
@@ -64,7 +65,7 @@ try:  # If parameters are not from pipeline, check input.
     output_read.close()
     print("Number of merged reads as input:" + str(reads_in))
     print("Number of non-mispriming reads:" + str(reads_out))
-    print("% passed reads:" + str((reads_out / reads_out)*100) + "%")
+    print("% passed reads:" + str((reads_out / reads_in) * 100) + "%")
 except IsNotInt:
     print("can only be a non-zero integer.")
     sys.exit(1)

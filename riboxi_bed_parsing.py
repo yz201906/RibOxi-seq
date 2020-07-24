@@ -136,7 +136,7 @@ counts_df.to_csv('all_counts.tsv', sep='\t', index=False)
 final_file = open('final_counts.tsv', 'w+')
 all_counts = open('all_counts.tsv', 'r')
 header_list = line_2_list(all_counts.readline(), '_\t')
-header = header_list[0] + '\t' + header_list[2] + '\t' + 'seq' + '\t' + '\t' + header_list[
+header = header_list[0] + '\t' + header_list[2] + '\t' + 'seq' + '\t' + header_list[
     3] + '\t' + '\n'
 final_file.write(header)
 all_counts.close()
