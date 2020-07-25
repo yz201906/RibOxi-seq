@@ -47,40 +47,37 @@ ui <- fluidPage(
             selectizeInput('genes', 'Gene Symbol:', choices = NULL),
             uiOutput("my_chr_list"),
             actionButton('gene_sample', 'Plot'),
+            conditionalPanel(condition = "input.gene_sample==1",
+                h3(" "),
+                downloadButton("download_pdf1", "Download plot"),
+                h3("Generate zoomed-in plot"),
+                uiOutput("my_base_list"),
+                sliderInput('window_size', "Select window size:", 10, 200, 30, step = 20),
+                actionButton('plot_zoomed', 'Plot'),
+                h3(" "),
+                downloadButton("download_pdf2", "Download plot")
+                ),
             width = 3
         ),
-        mainPanel(
-            dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
-            downloadButton("download_full_table", "Download table"),
-            width = 9
+        mainPanel(width = 9,
+            tabsetPanel(type = "tabs", id = "inTabset",
+                tabPanel("Data",
+                        dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
+                        downloadButton("download_full_table", "Download table")
+                ),
+                tabPanel("Visualization",
+                         plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
+                         plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1")
+                ),
+                tabPanel("Summary",
+                         
+                )
+            )
         )
     ),
-
-    # Other layouts ------------------------------------------------------------------------------------------------------------------------------------------
-    plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
-    fluidRow(column(1, {
-        downloadButton("download_pdf1", "Download plot")
-    }),
-    ),
-    shiny::tags$h1(
-        " ____________________________________________________________________________________________________________________________________________________________________________"
-    ),
-
-    shiny::tags$h1("                                 "),
-    sidebarLayout(
-        sidebarPanel(
-            uiOutput("my_base_list"),
-            sliderInput('window_size', "Select window size:", 10, 200, 30, step = 20),
-            actionButton('plot_zoomed', 'Plot'),
-            downloadButton("download_pdf2", "Download plot"),
-            width = 2
-        ),
-        mainPanel(
-            plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1"),
-            width = 10
-        )
-    )
 )
+
+
 
 ### Server side--------------------------------------------------------------------------------------------------------------------------------------
 
@@ -284,6 +281,10 @@ server <- function (input, output, session) {
             dev.off()
         }
     )
+    observeEvent(input$gene_sample, {
+        updateTabsetPanel(session, "inTabset",
+                          selected = "Visualization")
+    })
 }
 
 
