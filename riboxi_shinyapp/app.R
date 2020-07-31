@@ -11,6 +11,7 @@ library(biomaRt)
 library(shiny)
 library(shinycssloaders)
 library(BSgenome)
+library(shinydashboard)
 
 shinyOptions(cache = diskCache(file.path(dirname(tempdir()), "riboxi_shiny_cache")))
 load("raw_data.RData")
@@ -37,44 +38,44 @@ if (grepl('mm', args[3])) {
 
 
 ### UI side ------------------------------------------------------------------------------------------------------------------------------------------
-ui <- fluidPage(
-    shiny::tags$h1("RibOxi-seq Counts Visualization"),
-    # Sidebar+Main ------------------------------------------------------------------------------------------------------------------------------------------
-    sidebarLayout(
-        sidebarPanel(
-            selectizeInput('samples', 'Sample:', choices = NULL, multiple = TRUE),
-            numericInput('min_counts', 'Base position min mean counts:', 50),
-            selectizeInput('genes', 'Gene Symbol:', choices = NULL),
-            uiOutput("my_chr_list"),
-            actionButton('gene_sample', 'Plot'),
-            conditionalPanel(condition = "input.gene_sample==1",
-                h3(" "),
-                downloadButton("download_pdf1", "Download plot"),
-                h3("Generate zoomed-in plot"),
-                uiOutput("my_base_list"),
-                sliderInput('window_size', "Select window size:", 10, 200, 30, step = 20),
-                actionButton('plot_zoomed', 'Plot'),
-                h3(" "),
-                downloadButton("download_pdf2", "Download plot")
-                ),
-            width = 3
-        ),
-        mainPanel(width = 9,
-            tabsetPanel(type = "tabs", id = "inTabset",
-                tabPanel("Data",
-                        dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
-                        downloadButton("download_full_table", "Download table")
-                ),
-                tabPanel("Visualization",
-                         plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
-                         plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1")
-                ),
-                tabPanel("Summary",
-                         
-                )
-            )
+ui <- dashboardPage(
+    dashboardHeader(title = "RibOxi-Seq End Counts Visualization", titleWidth = 400),
+    # Sidebar ----
+    dashboardSidebar(
+        selectizeInput('samples', 'Sample:', choices = NULL, multiple = TRUE),
+        numericInput('min_counts', 'Base position min mean counts:', 50),
+        selectizeInput('genes', 'Gene Symbol:', choices = NULL),
+        uiOutput("my_chr_list"),
+        actionButton('gene_sample', 'Plot'),
+        conditionalPanel(
+            condition = "input.gene_sample==1",
+            h3(" "),
+            downloadButton("download_pdf1", "Download plot"),
+            h3("Generate zoomed-in plot"),
+            uiOutput("my_base_list"),
+            sliderInput('window_size', "Select window size:", 10, 200, 30, step = 20),
+            actionButton('plot_zoomed', 'Plot'),
+            h3(" "),
+            downloadButton("download_pdf2", "Download plot")
         )
     ),
+    dashboardBody(
+        tabsetPanel(
+            type = "tabs",
+            id = "inTabset",
+            tabPanel(
+                "Data",
+                dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
+                downloadButton("download_full_table", "Download table")
+            ),
+            tabPanel(
+                "Visualization",
+                plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
+                plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1")
+            ),
+            tabPanel("Summary",)
+        )
+    )
 )
 
 
