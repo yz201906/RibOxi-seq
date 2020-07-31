@@ -36,6 +36,29 @@ if (grepl('mm', args[3])) {
     my_strack <- SequenceTrack(Hsapiens)
 }
 
+gene_plot <- function(itrack, dtrack, grtrack, groups, position = NULL, window_size = NULL,  font_size = 1.5) {
+    if (!is.null(position) & !is.null(window_size)) {
+        plotTracks(
+            list(itrack, gtrack, dtrack, grtrack, my_strack),
+            cex = font_size,
+            background.panel = "#FFFEDB",
+            type = c("p","boxplot"),
+            groups = groups,
+            add53 = TRUE,
+            from = position$base - window_size,
+            to = position$base + window_size)
+    } else {
+        plotTracks(
+            list(itrack, gtrack, dtrack, grtrack),
+            cex = font_size,
+            background.panel = "#FFFEDB",
+            type = c("p","boxplot"),
+            groups = groups,
+            add53 = TRUE,
+        )
+    }
+}
+
 
 ### UI side ------------------------------------------------------------------------------------------------------------------------------------------
 ui <- dashboardPage(
@@ -48,7 +71,7 @@ ui <- dashboardPage(
         uiOutput("my_chr_list"),
         actionButton('gene_sample', 'Plot'),
         conditionalPanel(
-            condition = "input.gene_sample==1",
+            condition = "input.gene_sample>=1",
             h3(" "),
             downloadButton("download_pdf1", "Download plot"),
             h3("Generate zoomed-in plot"),
@@ -65,6 +88,7 @@ ui <- dashboardPage(
             id = "inTabset",
             tabPanel(
                 "Data",
+                h1("Click any row to select a gene.", style = "font-size:20px;"),
                 dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
                 downloadButton("download_full_table", "Download table")
             ),
@@ -83,15 +107,25 @@ ui <- dashboardPage(
 ### Server side--------------------------------------------------------------------------------------------------------------------------------------
 
 server <- function (input, output, session) {
-    updateSelectizeInput(session,
-                         'genes',
-                         choices = unique(raw_data$gene),
-                         server = TRUE)
+    observe({
+        updateSelectizeInput(session,
+                             'genes',
+                             choices = unique(raw_data$gene),
+                             selected = clicked_gene()$gene,
+                             server = TRUE)
+    })
     updateSelectizeInput(session,
                          'samples',
                          choices = list(colnames(dplyr::select(raw_data, starts_with(args[1])|starts_with(args[2])))),
                          server = TRUE)
-
+    clicked_gene <- eventReactive(input$usr_selected_rows_selected,{
+        selected_gene <- full_table() %>% dplyr::slice(input$usr_selected_rows_selected)
+    })
+    
+    observeEvent(input$usr_selected_rows_selected, {
+        updateSelectInput(session, "my_chr_list", selected = clicked_gene()$chr)
+    })
+    
     # Table ------------------------------------------------------------------------------------------------------------------------------------------
     selected_samples <- reactive({
         sample_filtered <- dplyr::select(raw_data, chr, base, gene, seq, any_of(input$samples))
@@ -99,10 +133,11 @@ server <- function (input, output, session) {
     })
 
     full_table <- reactive({
-        sample_filtered <- mutate(selected_samples(), counts_mean=rowMeans(dplyr::select(selected_samples(), contains(args[1])|contains(args[2]))))
+        sample_filtered <- mutate(selected_samples(), 
+                                  counts_mean=rowMeans(dplyr::select(selected_samples(), 
+                                                                     contains(args[1])|contains(args[2]))))
         counts_filtered <- filter(sample_filtered, counts_mean >= input$min_counts)
-        filtered <-
-            counts_filtered[order(-counts_filtered$counts_mean),]
+        filtered <- counts_filtered[order(-counts_filtered$counts_mean),]
     })
 
 
@@ -205,7 +240,6 @@ server <- function (input, output, session) {
         selectInput('my_chr', "Chromosome:", choices = chr_list, multiple = FALSE, selectize = FALSE)
     })
 
-
     output$my_base_list <- renderUI({
         my_site_list()
         selectInput(
@@ -213,45 +247,39 @@ server <- function (input, output, session) {
             'Select a site:',
             choices =  my_site_list()$base,
             multiple = TRUE,
+            selected = (my_site_list()$base)[1],
             selectize = FALSE
         )
     })
 
     output$usr_selected <-
-        renderDT(full_table(), class = "display nowrap compact", filter = "top")
-
-
-    gene_plot <- function(itrack, dtrack, grtrack, groups, position = NULL, window_size = NULL,  font_size = 1.5) {
-            if (!is.null(position) & !is.null(window_size)) {
-                plotTracks(
-                    list(itrack, gtrack, dtrack, grtrack, my_strack),
-                    cex = font_size,
-                    background.panel = "#FFFEDB",
-                    type = c("p","boxplot"),
-                    groups = groups,
-                    add53 = TRUE,
-                    from = position$base - window_size,
-                    to = position$base + window_size)
-            } else {
-                plotTracks(
-                    list(itrack, gtrack, dtrack, grtrack),
-                    cex = font_size,
-                    background.panel = "#FFFEDB",
-                    type = c("p","boxplot"),
-                    groups = groups,
-                    add53 = TRUE,
-                )
-            }
-    }
-
-    output$model_counts <- renderCachedPlot({
-        gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())},
-        cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_grouping())}
-        )
-    output$zoomed_in <- renderCachedPlot({
-        gene_plot(my_itrack(), my_dtrack(), my_grtrack(), my_grouping(), my_position(), my_window_size())},
-        cacheKeyExpr = {list(my_itrack(), my_dtrack(), my_grtrack(), my_position(), my_grouping(), my_window_size())}
-        )
+        renderDT(full_table(), class = "display nowrap compact",
+                 caption = "Please select a row.",
+                 selection = 'single',
+                 filter = "top")
+    
+    
+    observeEvent(input$gene_sample, {
+        output$model_counts <- renderCachedPlot({
+            gene_plot(isolate(my_itrack()), isolate(my_dtrack()), 
+                      isolate(my_grtrack()), isolate(my_grouping()))},
+            cacheKeyExpr = {list(isolate(my_itrack()), 
+                                 isolate(my_dtrack()), isolate(my_grtrack()), 
+                                 isolate(my_grouping()))}
+            )
+    })
+    observeEvent(input$plot_zoomed, {
+        req(my_position())
+        req(my_window_size())
+        output$zoomed_in <- renderCachedPlot({
+            gene_plot(isolate(my_itrack()), isolate(my_dtrack()), 
+                      isolate(my_grtrack()), isolate(my_grouping()), 
+                      isolate(my_position()), isolate(my_window_size()))},
+            cacheKeyExpr = {list(isolate(my_itrack()), isolate(my_dtrack()), 
+                                 isolate(my_grtrack()), isolate(my_position()), 
+                                 isolate(my_grouping()), isolate(my_window_size()))}
+            )
+    })
 
     # Downloads ------------------------------------------------------------------------------------------------------------------------------------------
     output$download_full_table <- downloadHandler(
