@@ -109,7 +109,7 @@ for sample in file_list:
             if line_list[0] not in all_chromosomes:
                 continue
             chr_base_dictionary(line_list[0], int(line_list[1]) + 1, int(line_list[2]), line_list[5], pos_dict, coding_dict, non_coding_dict)
-      
+
 for sample in file_list:
     tmp_dict = copy.deepcopy(
         pos_dict)  # making a deep copy of the dict for each sample, so counts are recorded separately
@@ -123,7 +123,7 @@ for sample in file_list:
 pos_dict = {}
 gtf_list_dict = {}
 
-df = pd.concat([pd.read_csv(f) for f in glob.glob('*.csv')], axis=1, ignore_index=False)
+df = pd.concat([pd.read_csv(f, dtype={"chr": "string"}) for f in glob.glob('*.csv')], axis=1, ignore_index=False)
 head = df.head()
 print(head)
 for csv in glob.glob("*.csv"):
@@ -136,18 +136,27 @@ counts_df.to_csv('all_counts.tsv', sep='\t', index=False)
 final_file = open('final_counts.tsv', 'w+')
 all_counts = open('all_counts.tsv', 'r')
 header_list = line_2_list(all_counts.readline(), '_\t')
-header = header_list[0] + '\t' + header_list[2] + '\t' + 'seq' + '\t' + header_list[
-    3] + '\t' + '\n'
+header = header_list[0] + '\t' + header_list[2] + '\t' + header_list[3] + '\t' + '\n'
+#header = header_list[0] + '\t' + header_list[2] + '\t' + 'seq' + '\t' + header_list[3] + '\t' + '\n'
 final_file.write(header)
+print("The header is: " + header)
 all_counts.close()
 
 pool = mp.Pool(threads)
 print("Using " + str(threads) + " cpu threads to generate table annotation...")
 with open('all_counts.tsv', 'r') as counts:
     next(counts)
-    results = [pool.apply(get_annotated_table, args=(line, args.genome_2_bit)) for line in counts]
+    # results = [pool.apply(get_annotated_table, args=(line, args.genome_2_bit)) for line in counts]
+    # for row in results:
+    #     final_file.write(row)
+        
+    results = [pool.apply(get_annotated_table, args=(line,)) for line in counts] #without seq
     for row in results:
         final_file.write(row)
+    
+    # for line in counts:                                                    #without multiprocess
+    #     final_file.write(get_annotated_table(line, args.genome_2_bit))
+    
 pool.close()
 
 final_file.close()

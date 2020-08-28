@@ -40,7 +40,7 @@ for read in $samplelist; do
       --minimum-length 20:20 \
       -a "$adaptor_sequence" \
       -A "$umi_N_bases"'AGATCGGAAGAGCGGTTCAG' \
-      -e 0.1 \
+      -e 0.2 \
       -o 'dt_'"$read"'_R1.fastq' \
       -p 'dt_'"$read"'_R2.fastq' "$read"'_R1.fastq' "$read"'_R2.fastq' >"$read"'.report'
     #Use PEAR to merge Read1s and Read2s into a single read
@@ -121,16 +121,18 @@ cp "$species" "bed_files"
 mkdir -p "genomecov"
 for sample in $samplelist; do
   cd "$sample"
+  samtools index "Aligned.sortedByCoord.out.bam"
+  samtools idxstats "Aligned.sortedByCoord.out.bam" | cut -f 1 | grep -v MT | grep -v KI | grep -v GL | xargs samtools view -b "Aligned.sortedByCoord.out.bam" > "clean.bam"
   echo "
 
 Processing ""$sample"" STAR alignment files...
 "
-  samtools index "Aligned.sortedByCoord.out.bam"
+  samtools index "clean.bam"
   echo "
 
 Deduplicating aligned reads...
 "
-  umi_tools dedup -I "Aligned.sortedByCoord.out.bam" -S "$sample""_dedup.bam" >>"$read"".report"
+  umi_tools dedup -I "clean.bam" -S "$sample""_dedup.bam" >>"$read"".report"
   echo "
 
 Converting BAM to BED...
@@ -145,7 +147,10 @@ Generating genome coverage...
     -trackopts "name=""$sample" \
     -bga -3 -ibam "$sample""_dedup.bam" >"../genomecov/""$sample"".genomecov"
   cd ../
+  sed 's/^/chr/' genomecov/$sample".genomecov" > $sample"_ready.genomecov"
+
 done
+
 # shellcheck disable=SC2002
 grep $'\t'"gene"$'\t' $genome_path'/'$genome'.gtf' > $genome'_subset.gtf'
 grep 'protein_coding' $genome'_subset.gtf' > $genome'_coding.gtf'
@@ -160,15 +165,18 @@ Counting 3' ends and generating count table...
 echo "
 Input samples: $samplelist
 Effective command: -b $samplelist -s $species -g '../'$genome'_subset.gtf' -2b $genome_path/$genome'.2bit' -c $cpu_threads
-" >>"$read"".report"
+"
 
 riboxi_bed_parsing.py -b "$samplelist" -s "$species" -g '../'$genome -2b "$genome_path"/"$genome"'.2bit' -c $cpu_threads -m 'pipeline'
+echo "Done."
+rm all_counts.tsv
+
 cd ".."
 rm $genome"_non_coding.gtf"
 rm $genome"_coding.gtf"
 rm $genome"_subset.gtf"
-rm dt_*
+#rm dt_*
 #rm trimmed_*
 #rm umi_removed_
 #rm assembled_*
-rm unassembled_*
+#rm unassembled_*

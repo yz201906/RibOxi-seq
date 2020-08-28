@@ -3,14 +3,14 @@
 # Objective : Shiny app that allows visualization based on gene symbol and enables various statistics.
 # Created by: yinzh
 # Created on: 5/4/2020
-library(tidyverse)
-library(DT)
-library(Gviz)
-library(GenomicRanges)
-library(biomaRt)
+require(tidyverse)
+require(DT)
+require(Gviz)
+require(GenomicRanges)
+require(biomaRt)
 library(shiny)
 library(shinycssloaders)
-library(BSgenome)
+require(BSgenome)
 library(shinydashboard)
 
 shinyOptions(cache = diskCache(file.path(dirname(tempdir()), "riboxi_shiny_cache")))
@@ -88,7 +88,12 @@ ui <- dashboardPage(
             id = "inTabset",
             tabPanel(
                 "Data",
-                h1("Click any row to select a gene.", style = "font-size:20px;"),
+                shiny::tags$a(
+                    href = "https://www.youtube.com/watch?v=UFB993xufUU",
+                    "Click here for a demonstration on how counts are normalized (Median of ratios).",
+                    style = "color:green;font-size:20px;"
+                ),
+                h1("Click any row below to select a gene and fields on the left will be filled automatically.", style = "font-size:20px;"),
                 dataTableOutput("usr_selected") %>% withSpinner(color = "#0dc5c1"),
                 downloadButton("download_full_table", "Download table")
             ),
@@ -97,7 +102,11 @@ ui <- dashboardPage(
                 plotOutput("model_counts") %>% withSpinner(color = "#0dc5c1"),
                 plotOutput('zoomed_in') %>% withSpinner(color = "#0dc5c1")
             ),
-            tabPanel("Summary",)
+            tabPanel(
+                "Summary",
+                plotOutput("pca_plot"),
+                downloadButton("download_pdf3", "Download plot")
+                )
         )
     )
 )
@@ -127,11 +136,16 @@ server <- function (input, output, session) {
     })
     
     # Table ------------------------------------------------------------------------------------------------------------------------------------------
+    # selected_samples <- reactive({
+    #     sample_filtered <- dplyr::select(raw_data, chr, base, gene, seq, any_of(input$samples))
+    #     sample_filtered
+    # })
+
     selected_samples <- reactive({
-        sample_filtered <- dplyr::select(raw_data, chr, base, gene, seq, any_of(input$samples))
+        sample_filtered <- dplyr::select(raw_data, chr, base, gene, any_of(input$samples))
         sample_filtered
     })
-
+    
     full_table <- reactive({
         sample_filtered <- mutate(selected_samples(), 
                                   counts_mean=rowMeans(dplyr::select(selected_samples(), 
@@ -154,7 +168,7 @@ server <- function (input, output, session) {
     my_gene_to_plot <- reactive({
         gene_to_plot <- filter(selected_samples(),gene == input$genes)
         gene_to_plot$gene <- NULL
-        gene_to_plot$seq <- NULL
+#        gene_to_plot$seq <- NULL
         gene_to_plot
     })
 
@@ -189,7 +203,7 @@ server <- function (input, output, session) {
     })
 
     my_gene_to_plot_anno <- eventReactive(input$genes, {
-        gene_to_plot_anno <- BiomartGeneRegionTrack(biomart = ensembl,genome = my_gen,symbol = input$genes,)
+        gene_to_plot_anno <- BiomartGeneRegionTrack(biomart = ensembl,genome = my_gen,symbol = input$genes)
         ranges(gene_to_plot_anno) <- subset(ranges(gene_to_plot_anno), symbol == input$genes)
         gene_to_plot_anno
     })
@@ -224,7 +238,8 @@ server <- function (input, output, session) {
                 fill = 'black',
                 lwd = 0.7,
                 lex = 10,
-                background.title = "brown"
+                background.title = "brown",
+                collapseTranscripts="longest"
             )
     })
 
@@ -280,6 +295,11 @@ server <- function (input, output, session) {
                                  isolate(my_grouping()), isolate(my_window_size()))}
             )
     })
+    
+    output$pca_plot <-
+        renderPlot({
+            pca_plot_rl_dist
+            })
 
     # Downloads ------------------------------------------------------------------------------------------------------------------------------------------
     output$download_full_table <- downloadHandler(
@@ -310,6 +330,16 @@ server <- function (input, output, session) {
             dev.off()
         }
     )
+    
+    output$download_pdf3 <- downloadHandler(
+        filename = function() {
+            paste('PCA_plot.pdf', sep = '')
+        },
+        content = function(file) {
+            ggsave(file, plot = pca_plot_rl_dist, device = "pdf")
+        }
+    )
+    
     observeEvent(input$gene_sample, {
         updateTabsetPanel(session, "inTabset",
                           selected = "Visualization")

@@ -102,15 +102,24 @@ def get_rna_seq(chromosome, start, end, two_bit):
             end) + ' ' + two_bit + ' stdout').read()
     return line_2_list(process.upper(), '\n')[1]
 
-def get_annotated_table(table_row, genome_2_bit):
+# def get_annotated_table(table_row, genome_2_bit):
+#     line_list = line_2_list(table_row, '\t')
+#     seq = get_rna_seq(line_list[0], int(line_list[1]) - 16, int(line_list[1]) + 15, genome_2_bit)
+#     if line_list[2] == '-':
+#         seq_rc = reverse_compliment(seq)
+#         seq = seq_rc
+#     if 'chr' not in line_list[0]:
+#         chr_str = 'chr' + line_list[0]
+#     else:
+#         chr_str = line_list[0]
+#     out_string = chr_str + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + line_2_list(table_row, '_\t')[1] + '\n'
+#     return out_string
+
+def get_annotated_table(table_row):              #Without seq
     line_list = line_2_list(table_row, '\t')
-    seq = get_rna_seq(line_list[0], int(line_list[1]) - 16, int(line_list[1]) + 15, genome_2_bit)
-    if line_list[2] == '-':
-        seq_rc = reverse_compliment(seq)
-        seq = seq_rc
     if 'chr' not in line_list[0]:
         chr_str = 'chr' + line_list[0]
     else:
         chr_str = line_list[0]
-    out_string = chr_str + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + seq + '\t' + line_2_list(table_row, '_\t')[1] + '\n'
+    out_string = chr_str + '\t' + line_list[1] + '\t' + line_list[3].rstrip('_') + '\t' + line_2_list(table_row, '_\t')[1] + '\n'
     return out_string
