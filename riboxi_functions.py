@@ -23,19 +23,19 @@ def trim_quality(read_quality, umi_length):
     return read_quality[umi_length::]
 
 
-def get_gtf_dict(chromosome, start, end, gene_id, gtf_dict):
+def get_gtf_dict(chromosome, start, end, strand, gene_id, gtf_dict):
     """Parses GTF annotation lines and generate gtf_dictionary that has chromosomal information for each gene."""
     if chromosome not in gtf_dict:
-        gtf_dict.update({chromosome: [[start, end, gene_id]]})
+        gtf_dict.update({chromosome: [[start, end, gene_id, strand]]})
     else:
-        gtf_dict[chromosome].append([start, end, gene_id])
+        gtf_dict[chromosome].append([start, end, gene_id, strand])
 
-def find_gene_id(chromosomes, base):
+def find_gene_id(chromosomes, base, strand):
     """Takes a list as input (a list of [start position, end position, gene id] *pre-sorted*). Also takes in the
     arguments of base position, 0, length of list, which are used to search the base position in the list and returns
     the corresponding gene id. Implemented with binary search"""
     for gene_intervals in chromosomes:
-        if (base <= int(gene_intervals[1])) & (base >= int(gene_intervals[0])):
+        if (base <= int(gene_intervals[1])) & (base >= int(gene_intervals[0])) & (strand==gene_intervals[3]):
             return gene_intervals[2]
     return -1
 
@@ -46,29 +46,29 @@ def chr_base_dictionary(chromosome, start, end, strand, pos_dict, coding_dict, n
     if strand == '+':
         if chromosome in pos_dict:
             if end not in pos_dict[chromosome]:
-                gene_id = find_gene_id(non_coding_dict[chromosome], end)
+                gene_id = find_gene_id(non_coding_dict[chromosome], end, strand)
                 if gene_id == -1:
-                    gene_id = find_gene_id(coding_dict[chromosome], end)
+                    gene_id = find_gene_id(coding_dict[chromosome], end, strand)
                 if gene_id != -1:    
                     pos_dict[chromosome].update({end: [0, gene_id, strand]})
         else:
-            gene_id = find_gene_id(non_coding_dict[chromosome], end)
+            gene_id = find_gene_id(non_coding_dict[chromosome], end, strand)
             if gene_id == -1:
-                gene_id = find_gene_id(coding_dict[chromosome], end)
+                gene_id = find_gene_id(coding_dict[chromosome], end, strand)
             if gene_id != -1:
                 pos_dict.update({chromosome: {end: [0, gene_id, strand]}})
     else:
         if chromosome in pos_dict:
             if start not in pos_dict[chromosome]:
-                gene_id = find_gene_id(non_coding_dict[chromosome], start)
+                gene_id = find_gene_id(non_coding_dict[chromosome], start, strand)
                 if gene_id == -1:
-                    gene_id = find_gene_id(coding_dict[chromosome], start)
+                    gene_id = find_gene_id(coding_dict[chromosome], start, strand)
                 if gene_id != -1:
                     pos_dict[chromosome].update({start: [0, gene_id, strand]})
         else:
-            gene_id = find_gene_id(non_coding_dict[chromosome], start)
+            gene_id = find_gene_id(non_coding_dict[chromosome], start, strand)
             if gene_id == -1:
-                gene_id = find_gene_id(coding_dict[chromosome], start)
+                gene_id = find_gene_id(coding_dict[chromosome], start, strand)
             if gene_id != -1:
                 pos_dict.update({chromosome: {start: [0, gene_id, strand]}})
 

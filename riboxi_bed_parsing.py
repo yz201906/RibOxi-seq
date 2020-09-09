@@ -89,7 +89,7 @@ with open(args.gtf+'_coding.gtf', 'r') as annotation:
                 gtf_gene_name = line_2_list(naming, " ")[2]
         if line_list[0] not in all_chromosomes:
             continue
-        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), gtf_gene_name.strip('\"'), coding_dict)
+        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), line_list[6], gtf_gene_name.strip('\"'), coding_dict)
 with open(args.gtf+'_non_coding.gtf', 'r') as annotation:
     for line in annotation:
         line_list = line_2_list(line, '\t')
@@ -99,7 +99,7 @@ with open(args.gtf+'_non_coding.gtf', 'r') as annotation:
                 gtf_gene_name = line_2_list(naming, " ")[2]
         if line_list[0] not in all_chromosomes:
             continue
-        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), gtf_gene_name.strip('\"'), non_coding_dict)
+        get_gtf_dict(line_list[0], int(line_list[3]), int(line_list[4]), line_list[6], gtf_gene_name.strip('\"'), non_coding_dict)
 
 pos_dict = {}
 for sample in file_list:

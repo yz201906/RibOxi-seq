@@ -42,7 +42,7 @@ def reverse_compliment(seq):
 
 
 def sequence_compare(seq_1, seq_2):
-    if lcs(seq_1, seq_2) >= len(seq_1)-1:
+    if lcs(seq_1, seq_2) == len(seq_1):
         return 1
     else:
         return 2
