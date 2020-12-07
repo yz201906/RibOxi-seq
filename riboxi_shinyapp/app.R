@@ -239,7 +239,7 @@ server <- function (input, output, session) {
                 lwd = 0.7,
                 lex = 10,
                 background.title = "brown",
-                collapseTranscripts="longest"
+                collapseTranscripts="meta"
             )
     })
 

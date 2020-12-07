@@ -13,14 +13,16 @@ umi_length="$2"
 genome_path="$3"
 genome="$4"
 species="$5"
-adaptor_sequence="$6"
+adapter_sequence="$6"
 in_line_barcode="$7"
 cpu_threads="$8"
+paired="$9"
+linker_sequence=`echo $adapter_sequence | sed "s/in_line_barcode//"`
 if [[ -z "$cpu_threads" ]]; then
   cpu_threads=1
 fi
 
-riboxi_input_checker.py -l "$umi_length" -g "$genome_path" -b "$genome" -s "$species" -a "$adaptor_sequence" -i "$in_line_barcode" -c "$cpu_threads"
+riboxi_input_checker.py -l "$umi_length" -g "$genome_path" -b "$genome" -s "$species" -a "$adapter_sequence" -i "$in_line_barcode" -c "$cpu_threads"
 
 i=1
 while [[ $i -le $umi_length ]]; do
@@ -28,38 +30,65 @@ while [[ $i -le $umi_length ]]; do
   ((i = i + 1))
 done
 echo "Randomer: ""$umi_N_bases"
+echo "Full adapter: ""$adapter_sequence"
+echo "in_line_barcode: ""$in_line_barcode" 
 
 for read in $samplelist; do
   if [ ! -f 'trimmed_'"$read"'.fastq' ]; then
-    echo "Trimming $read reads..."
-    #Remove read-through adapter sequences. The fixed sequence under -A option corresponds to immumina universal 5' PCR adapter.
-    cutadapt -j $cpu_threads \
-      --minimum-length 20:20 \
-      -a "$adaptor_sequence" \
-      -A "$umi_N_bases"'AGATCGGAAGAGCGGTTCAG' \
-      -e 0.2 \
-      -o 'dt_'"$read"'_R1.fastq' \
-      -p 'dt_'"$read"'_R2.fastq' "$read"'_R1.fastq' "$read"'_R2.fastq' >"$read"'.report'
-    #Use PEAR to merge Read1s and Read2s into a single read
-    
-    echo "Merging PE reads with PEAR..."
-    
-    echo "Effective command: -f 'dt_'$read'_R1.fastq' -r 'dt_'$read'_R2.fastq' -o $read -n 20 -j $cpu_threads" >>"$read"'.report'
-    pear -f 'dt_'"$read"'_R1.fastq' -r 'dt_'"$read"'_R2.fastq' -o "$read" -n 20 -j $cpu_threads >>"$read"'.report'
-    #Merge Read1 and Read2 into single forward read
-    
-    echo "Moving UMIs to read names..."
-    echo "Effective command: -r $read'.assembled.fastq' -l $umi_length -o 'umiRemoved_'$read -i $in_line_barcode -a $adaptor_sequence" >>"$read"'.report'
-    move_umi.py -r "$read"'.assembled.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adaptor_sequence" -m 'pipeline' >>"$read"".report"
-    #Move the UMI from reads to read identifier line (first line of each fastq record). Also discard reads that do not contain in-line barcode
-    echo "Triming 3' adapter..."
-    #Remove 3'-adapter including 3' inline barcode
-    cutadapt -j $cpu_threads \
-      --discard-untrimmed \
-      --minimum-length 20 \
-      -a "$adaptor_sequence" \
-      -e 0.2 \
-      -o 'trimmed_'"$read"'.fastq' 'umiRemoved_'"$read"'.fastq' >>"$read"'.report'
+    if [ $paired = "paired" ]; then
+      echo "Trimming $read reads..."
+      
+      #Remove read-through adapter sequences. The fixed sequence under -A option corresponds to Illumina universal PCR primer.
+      cutadapt -j $cpu_threads \
+        --minimum-length 20:20 \
+        -a "$adapter_sequence" \
+        -A "$umi_N_bases"'AGATCGGAAGAGCGGTTCAG' \
+        -e 0.2 \
+        -o 'dt_'"$read"'_R1.fastq' \
+        -p 'dt_'"$read"'_R2.fastq' "$read"'_R1.fastq' "$read"'_R2.fastq' >"$read"'.report'
+
+      #Use PEAR to merge Read1s and Read2s into a single read
+      echo "Merging PE reads with PEAR..."
+      echo "Effective command: -f 'dt_'$read'_R1.fastq' -r 'dt_'$read'_R2.fastq' -o $read -n 20 -j $cpu_threads" >>"$read"'.report'
+      pear -f 'dt_'"$read"'_R1.fastq' -r 'dt_'"$read"'_R2.fastq' -o "$read" -n 20 -j $cpu_threads >>"$read"'.report'
+
+      #Move the UMI from reads to read identifier line (first line of each fastq record).
+      echo "Moving UMIs to read names..."
+      echo "Effective command: -r $read'.assembled.fastq' -l $umi_length -o 'umiRemoved_'$read -i $in_line_barcode -a $adapter_sequence" >>"$read"'.report'
+      move_umi.py -r "$read"'.assembled.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adapter_sequence" -m 'pipeline' >>"$read"".report"
+      echo "Triming 3' adapter..."
+      
+      #Remove 3'-adapter including 3' inline barcode
+      cutadapt -j $cpu_threads \
+        --discard-untrimmed \
+        --minimum-length 20 \
+        -a "$adapter_sequence" \
+        -e 0.1 \
+        -o 'trimmed_'"$read"'.fastq' 'umiRemoved_'"$read"'.fastq' >>"$read"'.report'
+    else
+      echo "Trimming $read reads..."
+      
+      # remove linker sequence excluding in-line barcode
+      cutadapt -j $cpu_threads \
+        --minimum-length 20 \
+        -a "$linker_sequence" \
+        -e 0.2 \
+        -o 'dt_'"$read"'.fastq' "$read"'.fastq' >"$read"'.report'
+      echo "Moving UMIs to read names..."
+      
+      #Move the UMI from reads to read identifier line (first line of each fastq record).
+      echo "Effective command: -r 'dt_'$read'.fastq' -l $umi_length -o 'umiRemoved_'$read -i $in_line_barcode -a $adapter_sequence" >>"$read"'.report'
+      move_umi.py -r 'dt_'$read'.fastq' -l "$umi_length" -o 'umiRemoved_'"$read" -i "$in_line_barcode" -a "$adapter_sequence" -m 'pipeline' >>"$read"".report"
+      echo "Triming 3' adapter..."
+      
+      #Remove 3' inline barcode
+      cutadapt -j $cpu_threads \
+        --discard-untrimmed \
+        --minimum-length 20 \
+        -a "$in_line_barcode" \
+        -e 0.01 \
+        -o 'trimmed_'"$read"'.fastq' 'umiRemoved_'"$read"'.fastq' >>"$read"'.report'
+    fi
   else
     echo "$read reads already processed."
   fi
@@ -77,8 +106,8 @@ for sample in $samplelist; do
     align_status=1
     STAR --runThreadN $cpu_threads \
          --outMultimapperOrder Random \
-         --outFilterScoreMinOverLread 0.66 \
-         --outFilterMatchNminOverLread 0.66 \
+         --outFilterScoreMinOverLread 0.8 \
+         --outFilterMatchNminOverLread 0.8 \
          --outFilterMismatchNoverReadLmax 0.1 \
          --outFilterMismatchNoverLmax 0.05 \
          --alignEndsType EndToEnd \
@@ -111,7 +140,7 @@ for sample in $samplelist; do
   echo "Processing $sample STAR alignment files..."
   samtools index "clean.bam"
   echo "Deduplicating aligned reads..."
-  umi_tools dedup -I "clean.bam" -S $sample'_dedup.bam' >>$read'.report'
+  umi_tools dedup -I "clean.bam" -S $sample'_dedup.bam' >>$sample'.report'
   echo "Converting BAM to BED..."
   bedtools bamtobed -i $sample'_dedup.bam' >'../bed_files/'$sample'.bed'
   echo "Generating genome coverage..."

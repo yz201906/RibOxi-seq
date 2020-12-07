@@ -48,7 +48,7 @@ rm(rl_dist, fill)
 rm(final_counts)
 rm(Control_num)
 rm(Treatment_num)
-rm(normalized_counts) 
+#rm(normalized_counts) 
 rm(count_data, dds, col_data)
 
 head(raw_data)

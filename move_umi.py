@@ -52,10 +52,6 @@ try:  # If parameters are not from pipeline, check input.
         # noinspection PyUnresolvedReferences
         for line1, line2, line3, line4 in itertools.zip_longest(*[read2] * 4):
             reads_in += 1
-            if sequence_compare(line2[(len(line2) - len(args.adapter_sequence) - 1):(
-                    len(line2) - len(args.adapter_sequence) - 1 + len(args.in_line_barcode)):],
-                                args.in_line_barcode) == 2:
-                continue
             processed_reads = move_umi(line1, line2, int(args.umi_length))
             output_read.write(processed_reads[0])
             output_read.write(processed_reads[1])
